@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile - KR</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage-compat.js"></script>
+
+  <link rel="icon" type="image/png" href="static/img/KRICON.png">
+
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 1rem;
+      background: #232323;
+      color: #333;
+    }
+
+    
+
+    .profile-section,
+    .blocks-section {
+      background-color: rgba(255, 255, 255, 0.9);
+      /* background: white; */
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .profile-progress-title {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      margin-top: 0px;
+    }
+    
+    .progress-bar-text {
+      font-size: 0.8rem;
+      color: #858585;
+    }
+
+    .profile-progress-section {
+      background-color: rgba(255, 255, 255, 0.75);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 40px;
+      z-index: 100;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+
+    .profile-progress-section .close-progress-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 20px;
+      color: #888888; /* Grey color */
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .profile-progress-section .close-progress-btn:hover {
+      color: #ff0000;
+    }
+
+    .progress-bar-container {
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background-color: #000000;
+      border-radius: 5px;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #FF8000;
+      border-radius: 5px;
+    }
+
+    .progress-circle {
+      width: 16px;
+      border: 1px solid #000000;
+      height: 16px;
+      background-color: black;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%); /* Center the circle on its 'left' position */
+      transition: background-color 0.3s ease;
+      z-index: 1; /* Ensure circles are above the progress bar fill */
+    }
+
+    .progress-circle.filled {
+      background-color: #7AB1A3;
+    }
+
+    .block {
+      /* border: 1px solid #ccc; */
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+
+    .practice-pill {
+      border: 1px solid #ff8800;
+      color: #ff8800;
+      background: none;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 1em;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.15s, color 0.15s, border 0.15s;
+      /* margin-bottom: 4px; */
+      user-select: none;
+    }
+
+    .practice-pill.selected {
+      background: #ff8800;
+      color: #fff;
+      /* border: none; */
+    }
+
+    .practice-pill:focus {
+      box-shadow: 0 0 0 2px #ff880055;
+    }
+
+    .block-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .block-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+
+
+    .block img {
+      height: 40px;
+      width: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .block-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      color: #000000;
+      padding: 1rem;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      /* margin-top: 0.5rem; */
+      /* margin-bottom: 1rem; */
+      /* padding: 0.5rem; */
+    }
+
+
+    button {
+      padding: 0.5rem 1rem;
+      background: #0000ff;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    button.secondary {
+      background: #999;
+    }
+
+    .disabled-btn {
+      background: #bbb !important;
+      color: #eee !important;
+      cursor: not-allowed !important;
+      border: none;
+    }
+
+    .edit-btn {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid #0000ff;
+      background-color: #fff;
+      color: #0000ff;
+      /* max-width: 50px; */
+    }
+
+    .delete-btn {
+      color: #ff4444;
+      max-width: 40px;
+      background: #fff;
+      border: 1px solid #ff4444;
+      height: 30px;
+      /* margin-left: 8px; */
+    }
+
+    .delete-btn:hover {
+      background: #cc0000;
+    }
+
+    .avatar-preview {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      margin: auto;
+    }
+
+    .auth-section {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .krlogo {
+      max-width: 100px;
+    }
+
+    .background-text {
+      color: #858585;
+    }
+
+    .file-upload-wrapper {
+      position: relative;
+      display: block;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .file-upload-input {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .file-upload-button {
+      padding: 6px 12px;
+      background: #8d8d8d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-block;
+    }
+
+    .file-upload-name {
+      margin-left: 8px;
+    }
+
+    .center-align {
+      display: block; /* Or inline-block if preferred for some contexts */
+      margin-left: auto;
+      margin-right: auto;
+      width: fit-content; 
+      text-align: center; /* Added for general centering of text within fit-content block */
+    }
+
+    .input-feild {
+      font-family: "Helvetica", "Arial", sans-serif;
+      border-radius: 4.5px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem;
+      border: 1px solid #a0a0a0;
+      color: #535353;
+      margin-top: 5px;
+    }
+
+    .top-margin {
+      margin-top: 25px;
+    }
+
+    #save-profile {
+      margin-top: 30px;
+      width: 100%;
+    }
+
+    .block-type-card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px 16px;
+      background: #fafafa;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: border 0.2s, box-shadow 0.2s;
+      min-width: 90px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .block-type-card.selected {
+      border: 2.5px solid #0000ff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+      background: #f0f6ff;
+    }
+
+    .block-type-icon {
+      width: 112px;
+      height: 71px;
+      margin-bottom: 6px;
+      background: #e0e0e0;
+      /* border-radius: 8px; */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .default-icon {
+      border-radius: 16px;
+      background: url('static/img/defaultlink-icon.jpg');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .default-icon::before {
+      display: none; /* Remove the pseudo-element */
+    }
+
+    .large-image-icon {
+      background: url('static/img/largeimg-icon.jpg');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 8px;
+    }
+
+    .carousel-icon {
+      background: url('static/img/carousel-icon.jpg');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      /* border-radius: 8px; */
+    }
+
+    .block-type-label {
+      font-size: 0.95em;
+      font-weight: bold;
+      color: #222;
+      text-align: center;
+    }
+
+    #block-live-preview {
+      min-height: 80px;
+      background: #f7f7f7;
+      border-radius: 8px;
+      border: 1.5px solid #e0e0e0;
+      padding: 12px;
+      margin-bottom: 1rem;
+    }
+
+    #carousel-slides-fields>.carousel-slide-field {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #fafbff;
+    }
+
+    /* Drag-and-drop highlights for carousel fields and preview slides */
+    #carousel-slides-fields .carousel-slide-field.drag-over {
+      outline: 2px dashed #0000ff;
+      background: #f3f7ff;
+    }
+    #carousel-slides-fields .slide-drag-handle {
+      cursor: move;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      color: #666;
+      margin-bottom: 6px;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    #carousel-slides-fields .slide-drag-handle:hover {
+      background: #e0e0e0;
+      color: #0000ff;
+      transform: scale(1.05);
+    }
+    #carousel-slides-fields .slide-reorder-controls button {
+      min-width: 36px;
+      height: 28px;
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    .preview-carousel-slide.drag-over {
+      outline: 2px dashed #0000ff;
+      outline-offset: -6px;
+    }
+    .preview-carousel-slide.dragging {
+      opacity: 0.7;
+    }
+
+    #add-carousel-slide {
+      margin-bottom: 10px;
+      background: #0000ff;
+      color: #fff;
+      border-radius: 4px;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    #add-block {
+      border-radius: 23px;
+      width: 100%;
+    }
+
+    /* Loading Screen Styles */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+
+    .loading-circle {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 3px solid transparent;
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite;
+    }
+
+    .loading-circle::before,
+    .loading-circle::after {
+      content: '';
+      position: absolute;
+      border: 3px solid transparent;
+      border-radius: 50%;
+    }
+
+    .loading-circle::before {
+      top: 5px;
+      left: 5px;
+      right: 5px;
+      bottom: 5px;
+      border-top-color: #8080ff;
+      animation: spin 2s linear infinite;
+    }
+
+    .loading-circle::after {
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      bottom: 15px;
+      border-top-color: #ffffff;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-logo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .drag-handle {
+      cursor: move;
+      padding: 8px;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+      height: 24px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      margin-right: 8px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .drag-handle:hover {
+      background: #e0e0e0;
+      color: #0000ff;
+      transform: scale(1.05);
+    }
+
+    .drag-handle:active {
+      background: #d0d0d0;
+      transform: scale(0.95);
+    }
+
+    .drag-handle svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .drag-handle svg path {
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .help-icon {
+      display: inline-flex;
+      width: 20px;
+      height: 20px;
+      background-color: transparent;
+      border: 1.5px solid #808080;
+      color: #69b3a2;
+      border-radius: 50%;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 4px !important;
+      user-select: none;
+      box-sizing: border-box;
+      vertical-align: middle;
+      padding: 0px;
+    }
+
+    .help-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      /* Hidden by default */
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      /* Ensure it's on top */
+    }
+
+    .help-modal-content {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 450px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+
+    .help-modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #555;
+      cursor: pointer;
+    }
+
+    .help-modal h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .help-modal p {
+      color: #555;
+      line-height: 1.6;
+    }
+
+    /* Welcome Popup Styles */
+    .welcome-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      /* Hidden by default, JS will change to flex */
+      justify-content: center;
+      align-items: center;
+      z-index: 10001;
+      /* Higher than other modals if necessary */
+      padding: 15px;
+      /* Add padding for smaller screens */
+      box-sizing: border-box;
+    }
+
+    .welcome-popup-content {
+      background: #f0f0f0;
+      /* Light grey background like screenshot */
+      /* padding: 25px; */
+      border-radius: 15px;
+      /* Rounded corners */
+      width: 100%;
+      max-width: 360px;
+      /* Max width for the popup */
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      color: #000000;
+      /* Black text */
+      font-family: Helvetica, Arial, sans-serif;
+      /* overflow-y: auto; */
+      /* Replaced by overflow: hidden */
+      max-height: 90vh;
+      position: relative;
+      /* Ensure positioning context for pseudo-element */
+      z-index: 1;
+      /* Ensure content is above the pseudo-element */
+      overflow-y: scroll;
+      /* Crucial for clipping the oversized ::before element */
+    }
+
+    .welcome-popup-content::before {
+      content: "";
+      position: absolute;
+      width: 110%;
+      /* Make pseudo-element larger than parent - reduced from 120% */
+      height: 110%;
+      /* Make pseudo-element larger than parent - reduced from 120% */
+      top: -5%;
+      /* Center the oversized pseudo-element - adjusted for 110% */
+      left: -5%;
+      /* Center the oversized pseudo-element - adjusted for 110% */
+      background-image: url('static/img/KRLOGO.png');
+      /* Your specified image */
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: cover;
+      /* Scale image to cover the 110x110 pseudo-element */
+      opacity: 0.03;
+      /* 5% opacity */
+      z-index: -1;
+      /* Place it behind the content */
+      /* border-radius: 15px; */
+      /* Not needed here, parent handles clipping */
+    }
+
+    .welcome-popup-content h2 {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 5px;
+      line-height: 1.2;
+    }
+
+    .welcome-popup-content .beta-version {
+      font-size: 13px;
+      color: #0000ff;
+      /* Blue for beta version text */
+      margin-top: 0;
+      margin-bottom: 0px;
+      font-weight: normal;
+    }
+
+    .welcome-popup-content .info-text2 {
+      font-size: 10px;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
+
+    .welcome-popup-content .tagline {
+      font-size: 23px;
+      margin-bottom: 20px;
+      line-height: 1.1;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    .popup-divider {
+      border: none;
+      height: 2px;
+      background-color: #007bff;
+      /* Blue divider line */
+      margin: 20px 0;
+    }
+
+    .welcome-popup-content .info-text {
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 5px;
+    }
+
+    .welcome-popup-content h3 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    .get-started-list {
+      list-style-position: inside;
+      /* Bullets inside */
+      padding-left: 0;
+      /* Remove default padding */
+      text-align: left;
+      margin: 0 auto 25px auto;
+      /* Center the list block */
+      max-width: 260px;
+      /* Adjust for better centering of text */
+    }
+
+    .get-started-list li {
+      font-size: 16px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .popup-link {
+      color: #0000ff;
+      /* Blue links */
+      text-decoration: underline;
+      font-weight: bold;
+    }
+
+    .popup-link:hover {
+      color: #0000cc;
+    }
+
+    .input-feild-title-text {
+      margin-bottom: 0 !important;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .input-feild-title-text span{
+      color: #ff0000;
+    }
+
+    .popup-join-btn {
+      background-color: #0000ff;
+      /* Bright blue JOIN button */
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 50px;
+      /* Pill shape */
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+      width: 80%;
+      max-width: 250px;
+      margin-top: 10px;
+      transition: background-color 0.2s ease;
+    }
+
+    .popup-join-btn:hover {
+      background-color: #0000cc;
+      /* Darker blue on hover */
+    }
+
+    #practices-buttons{
+      display: flex;
+      flex-wrap: wrap;
+      row-gap: 1px;
+      column-gap: 10px;
+      /* margin-bottom: 10px; */
+      
+    }
+
+    .section-header {
+      display: flex; /* Align items in a row */
+      align-items: center; /* Vertically center items */
+      /* For headers that are also .center-align, this will center content within the fit-content block */
+      /* For headers not .center-align, they will be left-aligned by default block behavior */
+    }
+
+    /* Adjust .center-align if it's on a .section-header to ensure flex behavior is maintained */
+    .section-header.center-align {
+      position: relative; 
+      width: 100%; /* Override .center-align's fit-content for full width */
+      margin-left: 0; /* Override .center-align's auto margin */
+      margin-right: 0; /* Override .center-align's auto margin */
+      /* display: flex; and align-items: center; are inherited from .section-header */
+    }
+
+    .section-header.center-align .header-text-content {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%; /* Ensure it spans full width for proper text centering */
+      display: flex; 
+      align-items: center;
+      justify-content: center; /* Center the actual text and help icon */
+    }
+
+    .header-step-number {
+      border: 1px solid #000000;
+      display: inline-flex; /* Or just flex, since parent is flex */
+      align-items: center;
+      justify-content: center;
+      width: 26px; /* Slightly larger for better text fit */
+      height: 26px;
+      
+      color: #ff8800;
+      border-radius: 50%; /* Makes it a circle */
+      font-size: 21px; /* Number size */
+      font-weight: bold;
+      margin-right: 12px; /* Space between circle and text */
+      flex-shrink: 0; /* Prevent circle from shrinking */
+    }
+
+    .logo-auth-container {
+      position: relative; /* Establishes positioning context for absolute children */
+      width: 100%;
+      margin-bottom: 1rem; /* Spacing below this whole block */
+      min-height: 48px; /* Ensure container is tall enough for logo and buttons */
+    }
+
+    .logo-auth-container .krlogo {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%); /* Centers the logo horizontally and vertically */
+      /* width & height are set inline on the img tag */
+    }
+
+    .logo-auth-container .auth-section {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%); /* Vertically centers the auth section */
+      text-align: right; /* Aligns button and text within auth-section to the right */
+      margin-bottom: 0; /* Reset margin for this specific auth-section */
+    }
+
+    .logo-auth-container .auth-section button {
+      margin-top: 0; /* Remove any top margin from general button styles */
+      margin-bottom: 4px; /* Optional: space between button and text if stacked */
+    }
+
+    .logo-auth-container .auth-section .background-text {
+      margin: 0; /* Reset margins for the user info paragraph */
+      /* text-align: right; is inherited from .auth-section */
+    }
+
+    /* Staggered animation for info text on slide 1 */
+    #welcome-slide-1 .info-text-container {
+      opacity: 0;
+      animation: fadeInFlyIn 0.5s ease-out forwards;
+    }
+
+    @keyframes fadeInFlyIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #welcome-slide-1 .info-text-container:nth-of-type(1) {
+      animation-delay: 0.4s;
+    }
+    #welcome-slide-1 .info-text-container:nth-of-type(2) {
+      animation-delay: 0.8s;
+    }
+    #welcome-slide-1 .info-text-container:nth-of-type(3) {
+      animation-delay: 1.2s;
+    }
+
+    /* Welcome Popup Step Animation */
+    .steps-list li {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    .welcome-slider.show-slide-2 .steps-list li {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .welcome-slider.show-slide-2 .steps-list li:nth-child(1) {
+      transition-delay: 0.4s;
+    }
+    .welcome-slider.show-slide-2 .steps-list li:nth-child(2) {
+      transition-delay: 0.6s;
+    }
+    .welcome-slider.show-slide-2 .steps-list li:nth-child(3) {
+      transition-delay: 0.8s;
+    }
+    .welcome-slider.show-slide-2 .steps-list li:nth-child(4) {
+      transition-delay: 1.0s;
+    }
+
+    /* Animation for "Ready?" text */
+    #welcome-slide-2 .ready-text {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    .welcome-slider.show-slide-2 #welcome-slide-2 .ready-text {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.5s ease-out 1.8s, transform 0.5s ease-out 1.2s;
+    }
+
+    #save-status {
+      font-size: 0.9em;
+      color: #666;
+      margin-left: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    #save-status.visible {
+      opacity: 1;
+    }
+    #save-status.saved {
+      color: #27ae60; /* Green for success */
+      font-weight: bold;
+    }
+
+    /* Collapsible Section Styles */
+    .collapsible-section {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background-color 0.3s;
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      cursor: pointer;
+      background-color: #e6e6e6;
+      border-radius: 8px;
+    }
+    
+    .collapsible-header .header-step-number {
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+    
+    .collapsed-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 1rem;
+    }
+
+    .collapsed-text {
+      flex-grow: 1;
+    }
+
+    .collapsed-text strong {
+      font-size: 1.1em;
+      color: #000;
+      display: block;
+    }
+
+    .collapsed-text small {
+      color: #666;
+    }
+
+    .chevron {
+      width: 24px;
+      height: 24px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      transition: transform 0.3s ease-out;
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      padding: 0px;
+      max-height: 2000px; /* Large value for open state */
+      overflow: hidden;
+      transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+      background-color: #e6e6e6;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .collapsible-content-inner {
+      padding: 0 1rem 1rem 1rem;
+    }
+
+    .collapsible-section.collapsed .collapsible-content {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    
+    .collapsible-section.collapsed .chevron {
+      transform: rotate(0deg);
+    }
+    .collapsible-section:not(.collapsed) .collapsible-header {
+      border-bottom: 1px solid #eee;
+    }
+
+    .help-banner {
+      align-items: center;
+      gap: 8px; /* Adds space between icon and text */
+    }
+    .help-banner .help-icon {
+      margin: 0; /* Override margin from other rules */
+    }
+    .help-banner p {
+      margin: 0; /* Removes default paragraph margin */
+    }
+
+    @media (max-width: 768px) {
+      .profile-progress-section {
+        top: 10px;
+      }
+    }
+
+    .profile-container, .page-content-wrapper {
+      overflow: visible;
+    }
+
+    #preview-btn-container {
+      position: fixed;
+      bottom:10px; /* Above mobile nav */
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      #preview-btn-container {
+        bottom: 80px;
+      }
+    }
+
+    #preview-page-btn {
+      background-color: #a2a2a2;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    #preview-page-btn:hover:not(:disabled) {
+      opacity: 1;
+      transform: scale(1.03);
+    }
+
+    #preview-page-btn:disabled {
+      background-color: #a2a2a2;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="hamburger-btn">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div id="mobile-side-nav">
+    <a
+      href="profile.html"
+      id="mobile-logged-in-user-status"
+      style="display: none; text-decoration: none"
+    >
+      <img id="mobile-logged-in-user-avatar" src="" alt="User Avatar" />
+      <span id="mobile-logged-in-user-text"></span>
+    </a>
+    <a href="index.html">NETWORK</a>
+    <a href="collab.html">COLLAB</a>
+    <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E Productions</a></p>
+  </div>
+
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-container">
+      <div class="loading-circle"></div>
+      <img src="static/img/KRSPIN-optimize.gif" alt="Loading..." class="loading-logo">
+    </div>
+  </div>
+
+  <nav class="kr-navbar">
+    <a href="index.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/networkicon.png" class="nav-icon" alt="Network"> NETWORK</a>
+    <a href="collab.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/collabicon.png" class="nav-icon" alt="Collab"> COLLAB</a>
+    <!-- <a href="profile.html" style="text-decoration:none;color:#0000ff;">JOIN</a> -->
+  </nav>
+
+  <!-- Fixed Top Middle Logo -->
+  <!-- <img src="static/img/WHITE KRLOGO.png" alt="KR Logo" id="fixed-top-logo"> -->
+
+  <div class="page-content-wrapper">
+    <div class="profile-container">
+      <div class="logo-auth-container">
+        <a href="index.html" style="text-decoration: none;">
+        <img class="krlogo" src="static/img/KRSPIN-optimize.gif" alt="KR LOGO" style="width:48px;height:48px;">
+      </a>
+        <div class="auth-section">
+          <button id="login-btn">Login with Google</button>
+        </div>
+      </div>
+      <p class="background-text center-align" id="user-info"></p>
+      
+      <div class="profile-progress-section" id="profileProgressSection">
+        <span class="close-progress-btn" id="closeProgressSectionBtn">&times;</span>
+        <p class="center-align profile-progress-title">Finish Building Your Profile!</p>
+        <div class="progress-bar-container">
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+            <div class="progress-circle" id="progressCircle1" style="left: 0%;"></div>
+            <div class="progress-circle" id="progressCircle2" style="left: 33.33%;"></div>
+            <div class="progress-circle" id="progressCircle3" style="left: 66.66%;"></div>
+            <div class="progress-circle" id="progressCircle4" style="left: 100%;"></div>
+          </div>
+        </div>
+        <p class="progress-bar-text center-align" id="progressTextDetails">Fill in your details</p>
+        <p class="progress-bar-text center-align" id="progressTextConnect" style="display: none;">Connect with others</p>
+        <p class="progress-bar-text center-align" id="progressTextBuild" style="display: none;">Build your profile page</p>
+        <p class="progress-bar-text center-align" id="progressTextComplete" style="display: none;">🎉 You're all set up!</p>
+      </div>
+
+      <div class="collapsible-section" id="profile-collapsible-section">
+        <div class="collapsible-header">
+            <span class="header-step-number">1</span>
+            <img id="collapsed-avatar-preview" class="collapsed-avatar" src="static/img/default-avatar.png">
+            <div class="collapsed-text">
+                <strong id="collapsed-title">YOUR PROFILE</strong>
+                <small>Manage Your profile details</small>
+            </div>
+            <span class="chevron"></span>
+        </div>
+        
+        <div class="collapsible-content">
+
+          <div class="help-banner" data-help="profile-help-btn">
+            <button class="help-icon" id="profile-help-btn">?</button>
+            <p class="help-banner-text">How do I use this section?</p>
+          </div>
+
+          <div class="collapsible-content-inner">
+            <!-- Logout button -->
+                          <div style="text-align: center; margin-bottom: 1rem;">
+                <button id="logout-btn" style="display: none;">LOG OUT/SWITCH ACCOUNT</button>
+              </div>
+            <!-- Re-introducing the main avatar and title for the expanded view -->
+          <img id="avatar-preview" class="avatar-preview" src="static/img/default-avatar.png" alt="Avatar" />
+          <div id="profile-title-display" class="center-align" style="margin-bottom: 10px; font-weight: bold; font-size: 1.1em;"></div>
+
+          <!-- Existing Profile Section Content -->
+          <div class="file-upload-wrapper" style="margin-top:1rem;">
+            <button class="file-upload-button">Change Profile Picture</button>
+            <span class="file-upload-name"> </span>
+            <input type="file" id="avatar-upload" accept="image/*" class="file-upload-input">
+          </div>
+          <div class="input-feild-title">
+            <p class="input-feild-title-text">Display Name<span>*</span></p>
+          </div>
+          <input type="text" class="input-feild " id="profile-title" placeholder="Profile Title">
+          <div class="input-feild-title">
+            <p class="input-feild-title-text">Bio<span>*</span></p>
+          </div>
+          <textarea id="bio" class="input-feild" rows="3" placeholder="Add your bio..."></textarea>
+          <div class="input-feild-title">
+            <p class="input-feild-title-text">Socials</p>
+          </div>
+          <input type="url" class="input-feild" id="instagram" placeholder="Instagram URL">
+          <input type="url" class="input-feild" id="youtube" placeholder="YouTube URL">
+          <input type="url" class="input-feild" id="tiktok" placeholder="TikTok URL">
+          <div id="practices-section" style="margin: 24px 0 16px 0;">
+            <label style="font-weight:bold;display:block;margin-bottom:8px;">Select Your Creative Practices:</label>
+            <div id="practices-buttons"></div>
+          </div>
+          <span id="save-status"></span>
+          <!-- End of Profile Section Content -->
+          </div>
+          
+        </div>
+      </div>
+
+
+      <div class="collapsible-section" id="connections-collapsible-section">
+        <div class="collapsible-header">
+          <span class="header-step-number">2</span>
+          <div class="collapsed-text">
+              <strong>YOUR CONNECTIONS</strong>
+              <small>Manage Your Connections With Friends</small>
+              
+          </div>
+          <span class="chevron"></span>
+        </div>
+        <div class="collapsible-content">
+          <div class="help-banner" data-help="connections-help-btn">
+            <button class="help-icon" id="connections-help-btn">?</button>
+            <p class="help-banner-text">How do I use this section?</p>
+          </div>
+          <div class="collapsible-content-inner">
+            <!-- Existing Connections Section Content -->
+            <div id="connections-list" style="margin-bottom:1rem; margin-top:1rem;"></div>
+            <button id="manage-connections-btn" style="background:#0000ff;color:#fff;">+ Add Connections</button>
+            <!-- End of Connections Section Content -->
+          </div>
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+      
+      <div class="blocks-section">
+        <h2 class="section-header blocks-section-header">
+          <span class="header-step-number">3</span>
+          <div class="collapsed-text line-height-1">
+            <strong>Build Your Page</strong>
+            <small class="section-description">Arrange Your Blocks To Direct People To What You Do</small>
+          </div>
+          <span class="help-icon" data-section="links">?</span>
+        </h2>
+        <div id="blocks-container"></div>
+        <button class="center-align" id="add-block">+ Add Block</button>
+      </div>
+
+
+      <div class="endspacer"></div>
+
+      <div class="modal" id="block-modal">
+        <div class="modal-content">
+          <h3 id="modal-title">Add Block</h3>
+          
+          <div id="block-url-container">
+            <p class="input-feild-title-text">URL:</p>
+            <input type="url" id="block-link" placeholder="Paste a link to get started...">
+            <div id="url-loading-indicator"></div>
+            <p id="url-instruction" style="font-size: 0.9em; color: #6e6e6e; margin-top: 8px; font-style: italic;">Enter a valid URL to continue with block creation</p>
+            <div id="embed-options" style="margin-top:8px; display:none;">
+              <p class="input-feild-title-text">Or, Embed:</p>
+              <button id="embed-youtube-btn" class="secondary" type="button" disabled>Embed YouTube</button>
+              <button id="embed-spotify-btn" class="secondary" type="button" disabled>Embed Spotify</button>
+              <p id="embed-hint" style="font-size: 0.85em; color: #6e6e6e; margin-top: 6px;">Paste a YouTube or Spotify link above, then choose an embed option.</p>
+            </div>
+          </div>
+
+          <div class="shown-after-url-input">
+            <div id="block-type-select" style="display: none; gap: 12px; justify-content: center; margin-bottom: 1rem;">
+              <div class="block-type-card selected" data-type="default">
+                <div class="block-type-icon default-icon"></div>
+                <div class="block-type-label">Default</div>
+              </div>
+              <div class="block-type-card" data-type="large-image">
+                <div class="block-type-icon large-image-icon"></div>
+                <div class="block-type-label">Large Image</div>
+              </div>
+              <div class="block-type-card" data-type="carousel">
+                <div class="block-type-icon carousel-icon"></div>
+                <div class="block-type-label">Slide Carousel</div>
+              </div>
+            </div>
+  
+            <div id="block-live-preview" style="display: none; margin-bottom: 1rem;"></div>
+            
+            <div id="block-fields-default-large">
+              <div id="block-details-container" style="display: none;">
+                <p class="input-feild-title-text" style="margin-top: 10px;">Title:</p>
+                <input type="text" id="block-title" placeholder="Block Title">
+                <p class="input-feild-title-text" style="margin-top: 10px;">Description:</p>
+                <input type="text" id="block-description" placeholder="Block Description">
+                <p class="input-feild-title-text" style="margin-top: 10px;">Upload Block Image:</p>
+                <input type="file" id="block-img" accept="image/*">
+                <div id="image-preview" style="margin-top: 10px;"></div>
+              </div>
+            </div>
+            
+            <div id="block-fields-carousel" style="display:none;">
+              <div id="carousel-slides-fields"></div>
+              <button id="add-carousel-slide" type="button">+ Add Slide</button>
+            </div>
+          </div>
+
+
+          
+
+
+          <div style="margin-top: 20px; margin-bottom: 100px;">
+            <button id="save-block">Save Block</button>
+            <button class="secondary" id="cancel-block">Cancel</button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal" id="connections-modal">
+        <div class="modal-content" style="max-width:420px;">
+          <button id="close-connections-modal"
+            style="float:right;font-size:1.3em;background:none;border:none;cursor:pointer;color: red;">&times;</button>
+          <h3>Manage Connections</h3>
+          <input type="text" id="connections-search" placeholder="Search users by title..."
+            style="width:100%;margin-bottom:1rem;">
+          <div id="connections-modal-list" style="max-height:350px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- Help Modal -->
+      <div class="help-modal" id="help-modal">
+        <div class="help-modal-content">
+          <span class="help-modal-close" id="help-modal-close">&times;</span>
+          <h3 id="help-modal-title"></h3>
+          <p id="help-modal-text"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kr-mobile-navbar-container">
+    <img
+      src="static/img/navbarbarboder.svg"
+      class="mobile-navbar-border"
+      alt=""
+    />
+    <img
+      src="static/img/navbar.svg"
+      class="mobile-navbar-border border-background"
+      alt=""
+    />
+    <div class="kr-mobile-navbar-bottom-line"></div>
+
+    <div class="kr-mobile-navbar">
+      <a href="index.html">
+        <div class="mobile-nav-item">
+          <img
+            src="static/img/networkborder.svg"
+            class="mobile-nav-bg"
+            alt=""
+          />
+          <img
+            src="static/img/networkicon.png"
+            class="mobile-nav-icon"
+            alt="Network"
+          />
+        </div>
+      </a>
+      <a href="collab.html">
+        <div class="mobile-nav-item">
+          <img
+            src="static/img/collabborder.svg"
+            class="mobile-nav-bg"
+            alt=""
+          />
+          <img
+            src="static/img/collabicon.png"
+            class="mobile-nav-icon"
+            alt="Collab"
+          />
+        </div>
+      </a>
+      
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+  <script type="module" src="profile-firebase-setup.js"></script>
+  <script type="module" src="profile-app.js"></script>
+  <script src="mobile-nav.js"></script>
+
+  <div id="notification-popup"
+    style="display:none;position:fixed;top:32px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:14px 32px;border-radius:8px;box-shadow:0 2px 12px #0003;z-index:99999;font-size:1.1em;transition:opacity 0.3s;">
+  </div>
+
+  <!-- Welcome Popup for Non-Logged-In Users -->
+  <div id="welcome-popup" class="welcome-popup-overlay" style="display: none;">
+    <div class="welcome-popup-content">
+      <div class="welcome-slider">
+        <div class="welcome-slide" id="welcome-slide-1">
+          <h2 class="welcome-popup-title">Welcome to the<br><span>KR NETWORK</span></h2>
+          <p class="beta-version">(beta v1.0) 📍 <span style="color: #5F5F5F;"> LONDON</span></p>
+          <p class="tagline">Built by creatives,<br>For creatives & our<br>communities</p>
+          <!-- <hr class="popup-divider"> -->
+          <div class="info-text-container">
+            <p class="info-text"> <strong>Gain genuine visibility:</strong> Be discovered for what you do. </p>
+          </div>
+          <div class="info-text-container">
+            <p class="info-text"> <strong>Collaborate and grow:</strong> Connect with other new artists, find new
+              opportunities. </p>
+          </div>
+          <div class="info-text-container">
+            <p class="info-text"> <strong>Centralise your presence: </strong> Showcase your work in one dynamic hub which
+              you can use to redirect audiences to all your work & socials. </p>
+          </div>
+
+          <h3>Join the movement, platform your own community. </h3>
+          <p class="info-text-small">*Please note, the network is still in development, and only available in London.</p>
+          <button id="welcome-start-btn" class="popup-start-btn">GET STARTED &rarr;</button><br>
+        </div>
+        <div class="welcome-slide" id="welcome-slide-2">
+            <a href="#" id="back-to-slide-1" class="welcome-back-btn">&lt;- back</a>
+            <h2 class="welcome-steps-title"><br>LET'S GET STARTED</h2>
+            <p class="welcome-steps-subtitle">This is what we're about to do to get you going:</p>
+            <ol class="steps-list">
+                <li>
+                    <div class="step-number">1</div>
+                    <div class="step-text">
+                        <strong>Create Your Account</strong>
+                        <small>Sign up with Google</small>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-number">2</div>
+                    <div class="step-text">
+                        <strong>Build Your Profile</strong>
+                        <small>Setup, Build & Connect</small>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-number">3</div>
+                    <div class="step-text">
+                        <strong>Navigate the Network</strong>
+                        <small>Find creatives & collaborations</small>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-number">4</div>
+                    <div class="step-text">
+                        <strong>Maximise Your Presence</strong>
+                        <small>Be seen</small>
+                    </div>
+                </li>
+            </ol>
+            <p class="ready-text">Ready?</p>
+            <button id="welcome-join-btn" class="popup-join-btn return-user">CREATE YOUR ACCOUNT &rarr;</button>
+            <p class="info-text2">Log in with Google</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="preview-btn-container">
+    <button id="preview-page-btn" style="display: none;" disabled>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span>Preview your page</span>
+    </button>
+  </div>
+
+  <div id="preview-modal">
+    <button id="preview-modal-close">&times;</button>
+    <iframe id="preview-iframe" src="" title="Profile Preview"></iframe>
+  </div>
+</body>
+
+</html>

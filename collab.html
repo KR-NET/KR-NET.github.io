@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collab - KR</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <link rel="icon" type="image/png" href="static/img/KRICON.png">
+</head>
+
+<body class="collab-page-body"> <!-- Added a specific class for potential body-level styling -->
+    <button id="hamburger-btn">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <div id="mobile-side-nav">
+        <a
+            href="profile.html"
+            id="mobile-logged-in-user-status"
+            style="display: none; text-decoration: none"
+        >
+            <img id="mobile-logged-in-user-avatar" src="" alt="User Avatar" />
+            <span id="mobile-logged-in-user-text"></span>
+        </a>
+        <a href="index.html">NETWORK</a>
+        <a href="collab.html">COLLAB</a>
+        <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E Productions</a></p>
+    </div>
+
+    <nav class="kr-navbar">
+        <a href="index.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/networkicon.png" class="nav-icon" alt="Network"> NETWORK</a>
+        <a href="collab.html" style="text-decoration:none;color:#0000ff;"><img src="static/img/collabicon.png" class="nav-icon" alt="Collab"> COLLAB</a>
+        <!-- <a href="profile.html" style="text-decoration:none;color:#ffffff;">JOIN</a> -->
+    </nav>
+
+    <img src="static/img/WHITE KRLOGO.png" alt="KR Logo" id="fixed-top-logo">
+
+    <a href="profile.html" id="logged-in-user-status" style="display: none; text-decoration: none;">
+        <img id="logged-in-user-avatar" src="" alt="User Avatar">
+        <span id="logged-in-user-text"></span>
+    </a>
+
+    <!-- Clear Filters button placed outside the searchbar container (fixed over the logo) -->
+    <button id="clear-collab-filters-btn" class="clear-filters-btn" aria-label="Clear all filters">Clear Filters</button>
+
+    <!-- Search & Filter UI for Collab Page -->
+    <div id="collab-searchbar-container">
+        <div class="collab-search-wrapper">
+            <div class="searchbar-row"> <!-- Reusing .searchbar-row for styling -->
+                <span class="search-icon"><img src="static/img/search.png" alt="Search" width="22" height="22"></span>
+                <input id="collab-search-input" type="text" placeholder="Search..." autocomplete="off" />
+                <button id="collab-filter-btn" aria-label="Filter collaborations"><img src="static/img/filter-icon.png"
+                        alt="Filter" width="22" height="22"></button>
+            </div>
+            <div id="collab-filter-chips"></div>
+            <button id="post-collab-btn" aria-label="Create new post"><span class="plus-icon">+</span></button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filter Dropdown -->
+    <div id="collab-filter-dropdown" class="collab-filter-dropdown">
+        <div class="dropdown-header">
+            <h3>Filter Collaborations</h3>
+            <button class="dropdown-close" aria-label="Close filter menu">&times;</button>
+        </div>
+        
+        <!-- Practices Section -->
+        <div class="filter-section">
+            <h4 class="section-title">Categories</h4>
+            <div class="filter-pills practices-pills">
+                <span class="filter-pill" data-type="practice" data-value="3D">3D</span>
+                <span class="filter-pill" data-type="practice" data-value="Architecture">Architecture</span>
+                <span class="filter-pill" data-type="practice" data-value="Community Engagement">Community Engagement</span>
+                <span class="filter-pill" data-type="practice" data-value="Computing">Computing</span>
+                <span class="filter-pill" data-type="practice" data-value="Graphic Design">Graphic Design</span>
+                <span class="filter-pill" data-type="practice" data-value="Fashion">Fashion</span>
+                <span class="filter-pill" data-type="practice" data-value="Film">Film</span>
+                <span class="filter-pill" data-type="practice" data-value="Fine Art">Fine Art</span>
+                <span class="filter-pill" data-type="practice" data-value="Image">Image</span>
+                <span class="filter-pill" data-type="practice" data-value="Jewelry">Jewelry</span>
+                <span class="filter-pill" data-type="practice" data-value="Music">Music</span>
+                <span class="filter-pill" data-type="practice" data-value="Performance Arts">Performance Arts</span>
+                <span class="filter-pill" data-type="practice" data-value="Photography">Photography</span>
+                <span class="filter-pill" data-type="practice" data-value="Printing">Printing</span>
+                <span class="filter-pill" data-type="practice" data-value="Product Design">Product Design</span>
+                <span class="filter-pill" data-type="practice" data-value="Publication">Publication</span>
+                <span class="filter-pill" data-type="practice" data-value="Set Design">Set Design</span>
+                <span class="filter-pill" data-type="practice" data-value="Sound">Sound</span>
+                <span class="filter-pill" data-type="practice" data-value="Writing">Writing</span>
+            </div>
+        </div>
+
+        <!-- Keywords Section -->
+        <div class="filter-section">
+            <h4 class="section-title">Keywords</h4>
+            <div class="filter-pills keywords-pills">
+                <span class="filter-pill" data-type="keyword" data-value="COLLABORATION">Collaboration</span>
+                <span class="filter-pill" data-type="keyword" data-value="CREDIT">Credit</span>
+                <span class="filter-pill" data-type="keyword" data-value="PAID">Paid</span>
+            </div>
+        </div>
+
+        <!-- Status Section -->
+        <div class="filter-section">
+            <h4 class="section-title">Status</h4>
+            <div class="filter-pills status-pills">
+                <span class="filter-pill" data-type="status" data-value="active">Active Posts</span>
+                <span class="filter-pill" data-type="status" data-value="expired">Expired Posts</span>
+            </div>
+        </div>
+
+        <!-- Date Range Section -->
+        <div class="filter-section">
+            <h4 class="section-title">Date Range</h4>
+            <div class="filter-pills date-pills">
+                <span class="filter-pill" data-type="dateRange" data-value="this-week">This Week</span>
+                <span class="filter-pill" data-type="dateRange" data-value="this-month">This Month</span>
+                <span class="filter-pill" data-type="dateRange" data-value="upcoming">Upcoming</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="collab-content-section" class="collab-content-section">
+
+        <div class="collab-content-section-body">
+            <div id="collab-loading-screen">
+                <canvas id="collab-loading-animation-canvas"></canvas>
+                <img src="static/img/KRSPIN-optimize.gif" alt="Loading...">
+                <p>Loading collaborations...</p>
+            </div>
+            <!-- <h1>Collaboration Coming Soon</h1>
+            <p>Stay tuned for the future!</p> -->
+        </div>
+
+
+        
+    </div>
+
+    <a href="profile.html" id="join-kr-button-fixed" style="display: none;">
+        <img src="static/img/community_logo_kr_white.png" alt="Join KR">
+        <span>JOIN KR</span>
+    </a>
+
+    <div class="kr-mobile-navbar-container">
+      <img src="static/img/navbarbarboder.svg" class="mobile-navbar-border " alt="">
+      <img src="static/img/navbar.svg" class="mobile-navbar-border border-background" alt="">
+      <div class="kr-mobile-navbar-bottom-line"></div>
+
+      <div class="kr-mobile-navbar">
+          <a href="index.html">
+              <div class="mobile-nav-item">
+                  <img src="static/img/networkborder.svg" class="mobile-nav-bg" alt="">
+                  <img src="static/img/networkicon.png" class="mobile-nav-icon" alt="Network">
+              </div>
+          </a>
+          <a href="collab.html" class="active">
+              <div class="mobile-nav-item">
+                  <img src="static/img/collabborder.svg" class="mobile-nav-bg" alt="">
+                  <img src="static/img/collabicon.png" class="mobile-nav-icon" alt="Collab">
+              </div>
+          </a>
+      </div>
+    </div>
+
+    <audio id="node-click-audio" src="static/sounds/click-soft.mp3" preload="auto"></audio>
+
+    <script type="module" src="collab-firebase-setup.js"></script>
+    <script type="module" src="collab-app.js"></script>
+    <script src="loading-canvas-animation.js"></script>
+    <script src="mobile-nav.js"></script>
+    
+    <script>
+        // Add click sound to post-collab-btn
+        document.addEventListener('DOMContentLoaded', function() {
+            const postCollabBtn = document.getElementById('post-collab-btn');
+            const clickAudio = document.getElementById('node-click-audio');
+            
+            if (postCollabBtn && clickAudio) {
+                postCollabBtn.addEventListener('click', function() {
+                    clickAudio.currentTime = 0; // Reset audio to start
+                    clickAudio.play().catch(e => console.log('Audio play failed:', e));
+                });
+            }
+        });
+    </script>
+
+    <!-- Post Modal Overlay (added) -->
+    <div id="post-modal-overlay" class="post-modal-overlay hidden">
+        <div class="post-modal-content">
+            <button id="close-post-modal" class="close-modal-btn" aria-label="Close">&times;</button>
+            <div id="post-modal-body"></div>
+        </div>
+    </div>
+</body>
+
+</html> 

@@ -43,6 +43,20 @@ const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// Unified, guarded Google sign-in handler used by all login/join entry points
+let signingIn = false;
+async function signInWithGoogle() {
+  if (signingIn) return;
+  signingIn = true;
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    console.error('Login popup failed', e);
+  } finally {
+    signingIn = false;
+  }
+}
+
 const loginBtn = document.getElementById("login-btn");
 // Removed terms modal elements
 const logoutBtn = document.getElementById("logout-btn");
@@ -79,19 +93,9 @@ function updateNavbarForAuth() {
   }
 }
 
-loginBtn.onclick = async () => {
-  await signInWithPopup(auth, provider);
-};
-// Direct login button (skips terms modal and goes straight to Google pop-up)
-if (welcomeLoginBtn) {
-  welcomeLoginBtn.onclick = async () => {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (e) {
-      console.error('Login popup failed', e);
-    }
-  };
-}
+if (loginBtn) loginBtn.onclick = signInWithGoogle;
+// Direct login buttons (both call the same guarded handler)
+if (welcomeLoginBtn) welcomeLoginBtn.onclick = signInWithGoogle;
 
 logoutBtn.onclick = () => {
   signOut(auth);
@@ -154,6 +158,31 @@ onAuthStateChanged(auth, async (user) => {
           return;
         }
       }
+      // --- Connections onboarding seen-key migration/reset ---
+      try {
+        const legacyKey = 'kr_connections_onboard_seen_v1';
+        const perUserKey = `kr_connections_onboard_seen_v1:${user.email}`;
+        const legacyVal = localStorage.getItem(legacyKey);
+        // Determine current user's connections count if available
+        let connectionsCount = 0;
+        try {
+          if (userDocSnap.exists()) {
+            const d = userDocSnap.data();
+            connectionsCount = Array.isArray(d.connections) ? d.connections.length : 0;
+          }
+        } catch (_) { connectionsCount = 0; }
+        if (legacyVal !== null) {
+          if (connectionsCount > 0) {
+            // Preserve dismissal for returning users by migrating legacy -> per-user
+            localStorage.setItem(perUserKey, legacyVal);
+            localStorage.removeItem(legacyKey);
+          } else {
+            // New user with no connections: ensure onboarding will show
+            localStorage.removeItem(legacyKey);
+            localStorage.removeItem(perUserKey);
+          }
+        }
+      } catch (_) { /* ignore */ }
       
       // Set up the real-time listener for user data
       setupUserDataListener(user.email);
@@ -195,11 +224,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // Event listener for the JOIN button inside the welcome popup
-if (welcomeJoinBtn && loginBtn) {
-  welcomeJoinBtn.onclick = () => {
-    loginBtn.click();
-  };
-}
+if (welcomeJoinBtn) welcomeJoinBtn.onclick = signInWithGoogle;
 
 // --- Help Button Event Listeners ---
 const helpModal = document.getElementById('help-modal');
@@ -472,4 +497,5 @@ window.firebaseUtils = {
   db,
   upsertGlobalBlock,
   deleteGlobalBlock,
+  generateGlobalBlockId,
 };

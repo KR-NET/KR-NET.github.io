@@ -87,6 +87,8 @@ body.network-page-body {
 }
 
 
+.carousel-slide-link, .carousel-slide-title, .carousel-slide-desc { width: 98.5%; }
+
 .bottom-navbar {
   position: fixed;
   bottom: 0;
@@ -566,7 +568,7 @@ svg {
   position: absolute;
   right: 2%;
   transform: translateX(-50%);
-  margin-left: 16px; /* shift slightly to the right of center */
+  /* margin-left: 16px; */
   top: 45%;
   display: flex;
   flex-direction: column;
@@ -722,7 +724,7 @@ svg {
   /* Centers the icon and text within the button */
   background-color: #0000ff;
   color: white;
-  padding: 10px 20px;
+  padding: 10px 15px;
   border: none;
   border-radius: 15px;
   cursor: pointer;
@@ -3941,6 +3943,33 @@ svg {
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+/* Locate Me button (below Vision) */
+#locate-me-btn {
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px; /* spacing below Vision button */
+  padding: 0;
+  
+}
+
+#locate-me-btn img {
+  display: block;
+  /* filter: invert(1); */
+}
+
+#locate-me-btn:hover,
+#locate-me-btn:focus-visible {
+  background-color: #111;
 }
 
 #vision-mode-btn.active,

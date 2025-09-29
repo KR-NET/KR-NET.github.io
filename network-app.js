@@ -22,7 +22,7 @@ function updateFixedHeaderHeight() {
     // Effective space is 110px (searchbar top) + 48px (searchbar height) = 158px
     fixedHeaderHeight = 158;
   }
-  console.log("Updated fixedHeaderHeight:", fixedHeaderHeight);
+  // console.log("Updated fixedHeaderHeight:", fixedHeaderHeight);
 }
 
 // Initial call to set the header height
@@ -49,8 +49,27 @@ const R_DEFAULT = 8; // Current normal size
 const R_DISTANT = 5;
 const R_MAGNIFIED = 30; // For nodes inside the vision circle
 
+// Create a URL-friendly profile slug from a title: lowercase + remove spaces
+function slugifyTitle(title) {
+  return String(title || '').toLowerCase().replace(/\s+/g, '');
+}
+
 let activeClickedNodeId = null; // To keep track of the currently selected node for sizing
 let currentProfileIdInUrl = null; // To track profile ID from URL for state management
+const locateMeBtn = document.getElementById('locate-me-btn');
+
+function updateLocateButtonVisibility() {
+  try {
+    if (!locateMeBtn) return;
+    const user = (window.networkFirebaseUtils && window.networkFirebaseUtils.currentUser) ? window.networkFirebaseUtils.currentUser : null;
+    if (!user) { locateMeBtn.style.display = 'none'; return; }
+    const hasNode = Array.isArray(nodes) && nodes.some(n => n.id === user.email);
+    locateMeBtn.style.display = hasNode ? 'flex' : 'none';
+  } catch (e) {
+    // Fail-safe: hide on any unexpected error
+    if (locateMeBtn) locateMeBtn.style.display = 'none';
+  }
+}
 
 const loadingScreen = document.getElementById('network-loading-screen'); // Get reference to loading screen
 const loadingScreenGif = loadingScreen ? loadingScreen.querySelector('img') : null;
@@ -412,10 +431,11 @@ async function initNetwork() {
     triggerHaptic();
     const userProfile = await window.networkFirebaseUtils.getUserProfile(d.id);
     if (userProfile) {
-      // Update URL before showing modal
-      if (userProfile.id) {
-        history.pushState({ profileId: userProfile.id }, `Profile ${userProfile.title || userProfile.email}`, `?profile=${userProfile.id}`);
-        currentProfileIdInUrl = String(userProfile.id);
+      // Update URL before showing modal (use title-based link)
+      if (userProfile.title || userProfile.email) {
+        const slug = slugifyTitle(userProfile.title || (userProfile.email || '').split('@')[0]);
+        history.pushState({ profileSlug: slug }, `Profile ${userProfile.title || userProfile.email}`, `?link=${slug}`);
+        currentProfileIdInUrl = String(slug);
       }
       showProfileModal(userProfile);
     }
@@ -482,6 +502,28 @@ function kebabButtonHtml(link, idx, isCarousel) {
   </button>`;
 }
 
+// --- Minimal sanitization helpers for safe rendering ---
+function sanitizeText(text, withLineBreaks = false) {
+  const t = (text == null) ? '' : String(text);
+  const escaped = t
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  return withLineBreaks ? escaped.replace(/\r\n|\r|\n/g, '<br>') : escaped;
+}
+
+function safeHttpUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  try {
+    const u = new URL(url, window.location.origin);
+    const scheme = u.protocol.toLowerCase();
+    if (scheme === 'http:' || scheme === 'https:') return u.href;
+  } catch(_) { /* fallthrough */ }
+  return '';
+}
+
 // Show profile modal
 function showProfileModal(user) {
   const popupContainer = document.getElementById('popup-container');
@@ -523,7 +565,7 @@ function showProfileModal(user) {
       existingBtn.innerHTML = `<img src="static/img/community.svg" alt="Community" class="button-icon" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> VIEW COMMUNITY`;
       existingBtn.onclick = () => {
         closePopup(); // Call the main closePopup function which handles URL reset
-      };
+      }
     }
   }
 
@@ -543,8 +585,9 @@ function showProfileModal(user) {
   shareBtn.onclick = (e) => {
     e.stopPropagation();
 
-    // Construct the unique profile URL
-    const profileUrl = `${window.location.origin}${window.location.pathname}?profile=${user.id}`;
+    // Construct the unique profile URL (title-based slug)
+    const slug = slugifyTitle(user.title || (user.email || '').split('@')[0]);
+    const profileUrl = `${window.location.origin}${window.location.pathname}?link=${slug}`;
     const shareModal = document.getElementById('share-modal');
     if (!shareModal) {
       console.error("Share modal element not found.");
@@ -613,25 +656,123 @@ function showProfileModal(user) {
   }
   // --- END: Add "Edit Your Profile" link if applicable ---
   
-  // Update the JOIN button text
+  // Update the JOIN/CONNECT button text and behavior
   const joinButton = document.getElementById('buttonscrollanchor');
   if (joinButton) {
-    const userTitle = (user.title || 'USER').toUpperCase(); // Capitalize the title
-    const buttonText = `JOIN ${userTitle} ON KR`; 
-    
-    // Find the text node directly within the button (more robust)
-    let textNode = null;
-    for (const node of joinButton.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-        textNode = node;
-        break;
+    const userTitle = (user.title || 'USER').toUpperCase();
+    const loggedInUserNet = window.networkFirebaseUtils ? window.networkFirebaseUtils.currentUser : null;
+    const isSelf = !!(loggedInUserNet && loggedInUserNet.email === user.email);
+    const parentAnchor = joinButton.closest('a');
+
+    const setButtonText = (text) => {
+      // Find the text node directly within the button (more robust)
+      let textNode = null;
+      for (const node of joinButton.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+          textNode = node;
+          break;
+        }
       }
-    }
-    if (textNode) {
-      textNode.textContent = ` ${buttonText} `;
+      if (textNode) {
+        textNode.textContent = ` ${text} `;
+      } else {
+        joinButton.innerHTML = `<img src="static/img/communityicon.png" alt="Community Icon" class="button-icon" /> ${text}`;
+      }
+    };
+
+    if (loggedInUserNet && !isSelf) {
+      // Logged in and viewing someone else → possibly connected already
+      setButtonText(`CONNECT WITH ${userTitle} ON KR`);
+      if (parentAnchor) {
+        parentAnchor.removeAttribute('href');
+        parentAnchor.removeAttribute('target');
+      }
+      joinButton.onclick = function (e) {
+        e.preventDefault();
+        openConnectConfirm();
+      };
+
+      // Check if already mutually connected; if so, hide the button entirely
+      (async () => {
+        try {
+          if (!window.networkFirebaseUtils || !window.networkFirebaseUtils.getUserProfile) return;
+          const myProfile = await window.networkFirebaseUtils.getUserProfile(loggedInUserNet.email);
+          const myConnections = Array.isArray(myProfile?.connections) ? myProfile.connections : [];
+          if (!myConnections.includes(user.email)) return; // not connected from my side
+          const targetProfile = await window.networkFirebaseUtils.getUserProfile(user.email);
+          const theirConnections = Array.isArray(targetProfile?.connections) ? targetProfile.connections : [];
+          const fullyConnected = theirConnections.includes(loggedInUserNet.email);
+          if (fullyConnected) {
+            if (parentAnchor) parentAnchor.style.display = 'none';
+            else joinButton.style.display = 'none';
+          }
+        } catch (err) {
+          // fail silently to avoid breaking UI
+        }
+      })();
     } else {
-      // Fallback if text node isn't found (e.g., if structure changes)
-      joinButton.innerHTML = `<img src="static/img/communityicon.png" alt="Community Icon" class="button-icon" /> ${buttonText}`;
+      // Not logged in or viewing self → keep JOIN behavior
+      setButtonText(`JOIN ${userTitle} ON KR`);
+      if (parentAnchor) {
+        parentAnchor.setAttribute('href', 'profile.html');
+        parentAnchor.setAttribute('target', '_blank');
+      }
+      joinButton.onclick = null;
+    }
+
+    function openConnectConfirm() {
+      const overlay = document.getElementById('connect-confirm-overlay');
+      const closeBtn = document.getElementById('connect-confirm-close');
+      const cancelBtn = document.getElementById('connect-cancel-btn');
+      const confirmBtn = document.getElementById('connect-confirm-btn');
+      const textEl = document.getElementById('connect-confirm-text');
+      if (!overlay || !confirmBtn) return;
+
+      const displayTitle = user.title || user.email || 'this user';
+      if (textEl) textEl.textContent = `Connect with ${displayTitle} on KR?`;
+
+      overlay.classList.add('visible');
+
+      function close() {
+        overlay.classList.remove('visible');
+        cleanup();
+      }
+      function onOverlay(e) { if (e.target === overlay) close(); }
+      function onEsc(e) { if (e.key === 'Escape') close(); }
+      function cleanup() {
+        overlay.removeEventListener('click', onOverlay);
+        document.removeEventListener('keydown', onEsc);
+        if (closeBtn) closeBtn.onclick = null;
+        if (cancelBtn) cancelBtn.onclick = null;
+        if (confirmBtn) confirmBtn.onclick = null;
+      }
+
+      overlay.addEventListener('click', onOverlay);
+      document.addEventListener('keydown', onEsc);
+      if (closeBtn) closeBtn.onclick = close;
+      if (cancelBtn) cancelBtn.onclick = close;
+      confirmBtn.onclick = async function () {
+        confirmBtn.disabled = true;
+        try {
+          if (window.networkFirebaseUtils && window.networkFirebaseUtils.addConnectionForCurrentUser) {
+            await window.networkFirebaseUtils.addConnectionForCurrentUser(user.email);
+          }
+        } catch (err) {
+          console.warn('Failed to add connection', err);
+        } finally {
+          confirmBtn.disabled = false;
+          close();
+          // Show success toast
+          const toast = document.getElementById('connect-toast');
+          if (toast) {
+            toast.textContent = 'Connection request sent';
+            toast.classList.add('visible');
+            setTimeout(() => {
+              toast.classList.remove('visible');
+            }, 1600);
+          }
+        }
+      };
     }
   }
 
@@ -663,7 +804,17 @@ function showProfileModal(user) {
 
   // Set bio
   const bioSection = popupContent.querySelector('.popup-spacer');
-  bioSection.innerHTML = user.bio || 'No bio available';
+  {
+    const text = (typeof user.bio === 'string' && user.bio.length > 0) ? user.bio : 'No bio available';
+    const safe = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+    bioSection.innerHTML = safe;
+  }
 
   // Remove old blocks container if it exists
   let oldBlocks = popupContent.querySelector('.feature-tile-container');
@@ -691,28 +842,28 @@ function showProfileModal(user) {
       if (block.type === 'default' || !block.type) {
         // Default: image left, text right, whole block is a link
         blockContainer.innerHTML += `
-          <a href="${block.link ? block.link : '#'}" class="block block-default" target="_blank" rel="noopener noreferrer" ${block.link ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
+          <a href="${safeHttpUrl(block.link) || '#'}" class="block block-default" target="_blank" rel="noopener noreferrer" ${safeHttpUrl(block.link) ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
             <div class="block-content">
               <img src="${block.icon || 'static/img/default-avatar.png'}" loading="lazy" width="40" height="40" alt="Block image">
               <div class="block-text block-text-default">
-                <div class="block-title">${block.title || ''}</div>
-                <div class="block-desc">${block.desc || ''}</div>
+                <div class="block-title">${sanitizeText(block.title || '')}</div>
+                <div class="block-desc">${sanitizeText(block.desc || '', true)}</div>
               </div>
-              <div class="block-kebab">${kebabButtonHtml(block.link, blockIdx, false)}</div>
+              <div class="block-kebab">${kebabButtonHtml(safeHttpUrl(block.link) || '', blockIdx, false)}</div>
             </div>
           </a>
         `;
       } else if (block.type === 'large-image') {
         // Large image: image on top, text below, whole block is a link
         blockContainer.innerHTML += `
-          <a href="${block.link ? block.link : '#'}" class="block block-large-image" target="_blank" rel="noopener noreferrer" ${block.link ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
+          <a href="${safeHttpUrl(block.link) || '#'}" class="block block-large-image" target="_blank" rel="noopener noreferrer" ${safeHttpUrl(block.link) ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
             <img src="${block.icon || 'static/img/default-avatar.png'}" loading="lazy" width="100%" height="230" style="object-fit:cover;border-radius:8px 8px 0 0;" alt="Block image">
             <div class="block-text-kebab-row">
               <div class="block-text">
-                <div class="block-title">${block.title || ''}</div>
-                <div class="block-desc">${block.desc || ''}</div>
+                <div class="block-title">${sanitizeText(block.title || '')}</div>
+                <div class="block-desc">${sanitizeText(block.desc || '', true)}</div>
               </div>
-              <div class="block-kebab">${kebabButtonHtml(block.link, blockIdx, false)}</div>
+              <div class="block-kebab">${kebabButtonHtml(safeHttpUrl(block.link) || '', blockIdx, false)}</div>
             </div>
           </a>
         `;
@@ -729,10 +880,10 @@ function showProfileModal(user) {
             <div style="width:100%;">${iframeHtml}</div>
             <div class="block-text-kebab-row">
               <div class="block-text">
-                <div class="block-title">${block.title || ''}</div>
-                <div class="block-desc">${block.desc || ''}</div>
+                <div class="block-title">${sanitizeText(block.title || '')}</div>
+                <div class="block-desc">${sanitizeText(block.desc || '', true)}</div>
               </div>
-              <div class="block-kebab">${kebabButtonHtml(block.link, blockIdx, false)}</div>
+              <div class="block-kebab">${kebabButtonHtml(safeHttpUrl(block.link) || '', blockIdx, false)}</div>
             </div>
           </div>
         `;
@@ -741,20 +892,20 @@ function showProfileModal(user) {
         blockContainer.innerHTML += `
           <div class="carousel-blocks">
             ${block.slides.map((slide, slideIdx) => `
-              <a href="${slide.link ? slide.link : '#'}" class="block block-large-image carousel-slide" target="_blank" rel="noopener noreferrer" ${slide.link ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
+              <a href="${safeHttpUrl(slide.link) || '#'}" class="block block-large-image carousel-slide" target="_blank" rel="noopener noreferrer" ${safeHttpUrl(slide.link) ? '' : 'tabindex="-1" style="pointer-events:none;opacity:0.6;"'}>
                 <img src="${slide.icon || 'static/img/default-avatar.png'}" loading="lazy" width="230" height="230" style="object-fit:cover;border-radius:8px 8px 0 0;" alt="Slide image">
                 <div class="block-text-kebab-row">
                   <div class="block-text">
-                    <div class="block-title">${slide.title || ''}</div>
-                    <div class="block-desc">${slide.desc || ''}</div>
+                    <div class="block-title">${sanitizeText(slide.title || '')}</div>
+                    <div class="block-desc">${sanitizeText(slide.desc || '', true)}</div>
                   </div>
-                  <div class="block-kebab">${kebabButtonHtml(slide.link, `${blockIdx}-${slideIdx}`, true)}</div>
+                  <div class="block-kebab">${kebabButtonHtml(safeHttpUrl(slide.link) || '', `${blockIdx}-${slideIdx}`, true)}</div>
                 </div>
               </a>
             `).join('')}
-          </div>
-        `;
-      }
+          </div>`;
+        ;
+      };
     });
   }
 
@@ -803,6 +954,9 @@ function showProfileModal(user) {
       closePopup();
     });
   });
+
+  // Ensure locate button visibility reflects current graph & auth
+  updateLocateButtonVisibility();
 
   // Add share modal if not present
   let shareModal = document.getElementById('share-modal');
@@ -1001,7 +1155,7 @@ const closePopup = () => {
   stickyOverlayButtonElement = null;
   
   // Reset URL if a profile was being shown
-  if (currentProfileIdInUrl || window.location.search.includes('profile=')) {
+  if (currentProfileIdInUrl || window.location.search.includes('link=')) {
     history.pushState(null, "Network", "/");
     currentProfileIdInUrl = null; 
   }
@@ -1573,8 +1727,8 @@ clearFiltersBtn.addEventListener('click', () => {
   updateClearFiltersBtn();
 
   if (currentProfileIdInUrl) {
-    // A profile is "pinned" by URL or was last clicked
-    const pinnedUser = allUsers.find(u => String(u.id) === String(currentProfileIdInUrl));
+    // A profile is "pinned" by URL or was last clicked (match by slug)
+    const pinnedUser = allUsers.find(u => slugifyTitle(u.title || (u.email || '').split('@')[0]) === String(currentProfileIdInUrl));
     if (pinnedUser) {
       activeClickedNodeId = pinnedUser.email; // Ensure this node is considered "active"
       updateNodeVisuals(pinnedUser.email); // Re-apply visuals focusing on this pinned user
@@ -1627,12 +1781,12 @@ window.addEventListener('load', async () => {
 
   // --- START: New code for deep linking ---
   const urlParams = new URLSearchParams(window.location.search);
-  const profileIdFromUrl = urlParams.get('profile');
+  const linkFromUrl = urlParams.get('link');
 
-  if (profileIdFromUrl && allUsers.length > 0) {
-    currentProfileIdInUrl = profileIdFromUrl; // Store it
-    // Find the user by the numerical ID from the URL
-    const targetUser = allUsers.find(user => String(user.id) === profileIdFromUrl);
+  if (linkFromUrl && allUsers.length > 0) {
+    currentProfileIdInUrl = linkFromUrl; // Store slug
+    // Find the user by matching the slugified title
+    const targetUser = allUsers.find(user => slugifyTitle(user.title || (user.email || '').split('@')[0]) === linkFromUrl);
 
     if (targetUser) {
       activeClickedNodeId = targetUser.email; // Set this as the active node
@@ -1685,7 +1839,7 @@ window.addEventListener('load', async () => {
         updateNodeVisuals(null); // Reset visuals to default
       }
     } else {
-      console.warn(`Deep link: User with ID "${profileIdFromUrl}" not found.`);
+      console.warn(`Deep link: User with link slug "${linkFromUrl}" not found.`);
       currentProfileIdInUrl = null; // Reset if user not found
       // If user not found, ensure URL doesn't persist invalid profile ID if user navigates away and back
       history.replaceState(null, "Network", "/"); 
@@ -1939,6 +2093,41 @@ try {
   }
 });
 
+// Handle Locate Me click
+if (locateMeBtn) {
+  locateMeBtn.addEventListener('click', async () => {
+    try {
+      const user = window.networkFirebaseUtils && window.networkFirebaseUtils.currentUser ? window.networkFirebaseUtils.currentUser : null;
+      if (!user) return;
+      // Find node
+      const targetNodeDatum = Array.isArray(nodes) ? nodes.find(n => n.id === user.email) : null;
+      if (targetNodeDatum) {
+        // Highlight and zoom
+        updateNodeVisuals(user.email);
+        zoomToNode(targetNodeDatum);
+        // Ensure Clear Filters button is visible so user can deselect links
+        if (typeof clearFiltersBtn !== 'undefined' && clearFiltersBtn) {
+          clearFiltersBtn.classList.add('active');
+          clearFiltersBtn.style.display = 'block';
+        }
+        playNodeClickSound();
+        triggerHaptic();
+      } else {
+        // Node not visible; show a brief toast with existing element if present
+        const toast = document.getElementById('connect-toast');
+        if (toast) {
+          const prev = toast.textContent;
+          toast.textContent = "We couldn't find your node yet. Complete your profile to appear.";
+          toast.classList.add('visible');
+          setTimeout(() => { toast.classList.remove('visible'); toast.textContent = prev; }, 1800);
+        }
+      }
+    } catch (e) {
+      console.error('Locate me failed', e);
+    }
+  });
+}
+
 // Add a soft click sound
 let nodeClickAudio = document.getElementById('node-click-audio');
 if (!nodeClickAudio) {
@@ -2110,15 +2299,82 @@ function renderNotifications() {
     // Build Connection Requests section first
     const connectionRequestsSection = renderConnectionRequestsSection();
 
+    // Helper: normalize legacy profile links (profile.html?profile= or ?profile=) to ?link=<slug>
+    function normalizeNotificationLink(raw) {
+        if (!raw) return '';
+        try {
+            // Extract ?profile= value from URL or string
+            let profileVal = null;
+            try {
+                const u = new URL(raw, window.location.origin);
+                const params = new URLSearchParams(u.search);
+                profileVal = params.get('profile');
+            } catch (_) {
+                const m = String(raw).match(/(?:\?|&)profile=([^&]+)/);
+                if (m) profileVal = decodeURIComponent(m[1]);
+            }
+
+            if (profileVal) {
+                // Try find user by id or email
+                let targetUser = allUsers.find(u => String(u.id) === profileVal || String(u.email) === profileVal);
+                let display = targetUser ? (targetUser.title || (targetUser.email || '').split('@')[0]) : profileVal;
+                // If it's an email and we didn't find a user, take local-part as best-effort
+                if (!targetUser && /@/.test(display)) display = display.split('@')[0];
+                const slug = slugifyTitle(display);
+                // Build relative link that works locally and on prod
+                const base = (window.location.pathname === '/' || /index\.html$/.test(window.location.pathname)) ? '' : 'index.html';
+                const sep = base ? '' : '';
+                return `${base}?link=${slug}`;
+            }
+
+            // No legacy param detected; return original
+            return raw;
+        } catch (e) {
+            return raw;
+        }
+    }
+
     // Then the regular notification items
     const notificationItemsHtml = userNotifications.map(n => {
         const isUnread = unreadNotificationIds.includes(n.id);
         const imageHtml = n.imageUrl ? `<img src="${n.imageUrl}" alt="Notification image" class="notification-image">` : '';
-        const linkHtml = n.link ? `<a href="${n.link}" target="_blank" class="notification-view-more">View More</a>` : '';
+        const normalizedLink = n.link ? normalizeNotificationLink(n.link) : '';
+        const linkHtml = normalizedLink ? `<a href="${normalizedLink}" target="_blank" class="notification-view-more">View More</a>` : '';
         const date = n.timestamp?.toDate ? n.timestamp.toDate().toLocaleDateString() : 'Just now';
 
+        // If this is a connection request notification, optionally include action buttons
+        let actionsHtml = '';
+        let emailForActions = '';
+        if (n.category === 'Connection Request') {
+            // Try derive email from link or from matching user
+            let candidate = '';
+            if (n.link) {
+                // profile=... or link=...
+                const m = String(n.link).match(/(?:\?|&)profile=([^&]+)/);
+                if (m) candidate = decodeURIComponent(m[1]);
+                if (!candidate) {
+                    const m2 = String(n.link).match(/(?:\?|&)link=([^&]+)/);
+                    if (m2) {
+                        const slug = decodeURIComponent(m2[1]);
+                        const user = allUsers.find(u => slugifyTitle(u.title || (u.email || '').split('@')[0]) === slug);
+                        if (user) candidate = user.email;
+                    }
+                }
+            }
+            // If candidate looks like an email or we resolved it, render actions
+            if (candidate) {
+                emailForActions = candidate;
+                actionsHtml = `
+                    <div class="connection-request-actions">
+                        <button class="connect-btn" data-email="${emailForActions}">Connect</button>
+                        <button class="decline-btn" data-email="${emailForActions}">Decline</button>
+                    </div>
+                `;
+            }
+        }
+
         return `
-            <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+            <div class="notification-item ${isUnread ? 'unread' : ''} ${n.category === 'Connection Request' ? 'connection-request-notif' : ''}" data-id="${n.id}">
                 ${isUnread ? '<span class="unread-indicator"></span>' : ''}
                 <div class="notification-header">
                     <img src="${getCategoryIcon(n.category)}" class="notification-category-icon" alt="${n.category}">
@@ -2133,6 +2389,7 @@ function renderNotifications() {
                     ${imageHtml}
                 </div>
                 ${linkHtml}
+                ${actionsHtml}
             </div>
         `;
     }).join('');
@@ -2144,6 +2401,29 @@ function renderNotifications() {
     }
 
     listContainer.innerHTML = connectionRequestsSection + notificationItemsHtml;
+
+    // Attach action handlers for connection-request notifications
+    listContainer.querySelectorAll('.connection-request-notif .connect-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const email = e.currentTarget.getAttribute('data-email');
+            if (!email) return;
+            await window.networkFirebaseUtils.addConnectionForCurrentUser(email);
+            // Remove notification item from DOM
+            e.currentTarget.closest('.notification-item')?.remove();
+            await computePendingConnectionRequests();
+            updateNotificationBell();
+        });
+    });
+    listContainer.querySelectorAll('.connection-request-notif .decline-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const email = e.currentTarget.getAttribute('data-email');
+            if (!email) return;
+            await window.networkFirebaseUtils.dismissConnectionRequestForCurrentUser(email);
+            e.currentTarget.closest('.notification-item')?.remove();
+            await computePendingConnectionRequests();
+            updateNotificationBell();
+        });
+    });
 }
 
 // --- Connection Requests Computation & Rendering ---
@@ -2186,7 +2466,7 @@ function renderConnectionRequestsSection() {
     const items = pendingConnectionRequests.map(u => {
         const avatar = u.avatar || 'static/img/default-avatar.png';
         const title = u.title || u.email.split('@')[0];
-        const viewLink = `index.html?profile=${encodeURIComponent(u.email)}`;
+        const viewLink = `index.html?link=${slugifyTitle(title)}`;
         return `
             <div class="notification-item connection-request" data-email="${u.email}">
                 <div class="notification-header">
@@ -2436,14 +2716,42 @@ function showNodeMedia(nodeData) {
     const user = allUsers.find(u => u.email === nodeData.id);
     if (!user || !user.blocks || user.blocks.length === 0) return;
 
-    const mediaBlocks = user.blocks.flatMap(block => {
+    // Helper: detect provider from URL
+    function detectProviderFromUrl(url) {
+        try {
+            const u = new URL(String(url || ''));
+            const host = (u.host || '').toLowerCase();
+            if (host.includes('youtube.com') || host.includes('youtu.be')) return 'youtube';
+            if (host.includes('spotify.com')) return 'spotify';
+        } catch (e) { /* ignore */ }
+        return null;
+    }
+
+    // Helper: choose icon for embeds (fall back to default)
+    function getEmbedIcon(block) {
+        const provider = block.provider || detectProviderFromUrl(block.embedUrl || block.link);
+        if (provider === 'youtube') return 'static/img/Youtube_logo.png';
+        if (provider === 'spotify') return 'static/img/Spotify_logo.png';
+        return 'static/img/default-icon.png';
+    }
+
+    // Build a normalized list of media items for satellites
+    const mediaItems = user.blocks.flatMap(block => {
         if (block.type === 'carousel' && Array.isArray(block.slides)) {
-            return block.slides.filter(slide => slide.icon);
+            return block.slides
+                .filter(slide => slide.icon)
+                .map(slide => ({ icon: slide.icon, link: slide.link || block.link || null, isEmbed: false }));
         }
-        return block.icon ? [block] : [];
+        if (block.type === 'embed') {
+            return [{ icon: getEmbedIcon(block), link: null, isEmbed: true }];
+        }
+        if (block.icon) {
+            return [{ icon: block.icon, link: block.link || null, isEmbed: false }];
+        }
+        return [];
     }).slice(0, 8); // Limit to max 8 media items per node for clarity
 
-    if (mediaBlocks.length === 0) return;
+    if (mediaItems.length === 0) return;
 
     const parentGroup = visionMediaGroup.append('g')
         .attr('class', 'vision-media-group')
@@ -2453,8 +2761,8 @@ function showNodeMedia(nodeData) {
     const satelliteDistance = 50;
     const imageSize = 25;
 
-    mediaBlocks.forEach((block, i) => {
-        const angle = (i / mediaBlocks.length) * 2 * Math.PI;
+    mediaItems.forEach((item, i) => {
+        const angle = (i / mediaItems.length) * 2 * Math.PI;
         const finalX = nodeData.x + satelliteDistance * Math.cos(angle);
         const finalY = nodeData.y + satelliteDistance * Math.sin(angle);
 
@@ -2469,29 +2777,39 @@ function showNodeMedia(nodeData) {
         // Satellite image - start at center
         const image = parentGroup.append('image')
             .attr('class', 'vision-media-image')
-            .attr('href', block.icon)
+            .attr('href', item.icon)
             .attr('x', nodeData.x - imageSize / 2)
             .attr('y', nodeData.y - imageSize / 2)
             .attr('width', imageSize)
             .attr('height', imageSize)
             .attr('clip-path', 'circle(50%)');
 
-        // Clickable link border - start at center
-        const border = parentGroup.append('a')
-            .attr('href', block.link || '#')
-            .attr('target', '_blank')
-            .attr('rel', 'noopener noreferrer')
-            .append('circle')
-            .attr('class', 'media-image-border')
-            .attr('cx', nodeData.x)
-            .attr('cy', nodeData.y)
-            .attr('r', imageSize / 2)
-            .style('cursor', block.link ? 'pointer' : 'default');
+        // Border (non-clickable for embeds, clickable for others)
+        let borderCircle;
+        if (item.isEmbed) {
+            borderCircle = parentGroup.append('circle')
+                .attr('class', 'media-image-border')
+                .attr('cx', nodeData.x)
+                .attr('cy', nodeData.y)
+                .attr('r', imageSize / 2)
+                .style('cursor', 'default');
+        } else {
+            borderCircle = parentGroup.append('a')
+                .attr('href', item.link || '#')
+                .attr('target', '_blank')
+                .attr('rel', 'noopener noreferrer')
+                .append('circle')
+                .attr('class', 'media-image-border')
+                .attr('cx', nodeData.x)
+                .attr('cy', nodeData.y)
+                .attr('r', imageSize / 2)
+                .style('cursor', item.link ? 'pointer' : 'default');
+        }
 
         // Animate elements to their final positions
         link.transition().duration(400).attr('x2', finalX).attr('y2', finalY);
         image.transition().duration(400).attr('x', finalX - imageSize / 2).attr('y', finalY - imageSize / 2);
-        border.transition().duration(400).attr('cx', finalX).attr('cy', finalY);
+        borderCircle.transition().duration(400).attr('cx', finalX).attr('cy', finalY);
     });
     
     // Fade in the whole group

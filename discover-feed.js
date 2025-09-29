@@ -261,8 +261,9 @@ function renderBlockCard(block, container) {
   header.style.cursor = 'pointer';
   header.onclick = () => {
     const cachedUser = window.__userCache ? window.__userCache[block.owner] : null;
-    const profileParam = cachedUser && cachedUser.id !== undefined ? cachedUser.id : block.owner;
-    window.location.href = `index.html?profile=${encodeURIComponent(profileParam)}`;
+    const display = (cachedUser && cachedUser.title) ? cachedUser.title : block.owner;
+    const slug = String(display || '').toLowerCase().replace(/\s+/g, '');
+    window.location.href = `index.html?link=${encodeURIComponent(slug)}`;
   };
 
   card.appendChild(header);
@@ -301,7 +302,20 @@ function renderBlockCard(block, container) {
 
   const d = document.createElement('div');
   d.className = 'discover-desc';
-  d.innerHTML = `${block.desc || ''}`;
+  // Minimal sanitization to prevent XSS and preserve simple line breaks
+  (function(){
+    function sanitizeText(text, withLineBreaks = false){
+      const t = (text == null) ? '' : String(text);
+      const escaped = t
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      return withLineBreaks ? escaped.replace(/\r\n|\r|\n/g, '<br>') : escaped;
+    }
+    d.innerHTML = sanitizeText(block.desc || '', true);
+  })();
   if (block.link) {
     d.style.cursor = 'pointer';
     d.addEventListener('click', (e) => {
@@ -631,8 +645,9 @@ function renderBlockCard(block, container) {
   // Navigate to the NETWORK page with the user's profile id (preferred) or email as fallback
   viewBtn.onclick = () => {
     const cachedUser = window.__userCache ? window.__userCache[block.owner] : null;
-    const profileParam = cachedUser && cachedUser.id !== undefined ? cachedUser.id : block.owner;
-    window.location.href = `index.html?profile=${encodeURIComponent(profileParam)}`;
+    const display = (cachedUser && cachedUser.title) ? cachedUser.title : block.owner;
+    const slug = String(display || '').toLowerCase().replace(/\s+/g, '');
+    window.location.href = `index.html?link=${encodeURIComponent(slug)}`;
   };
   card.appendChild(viewBtn);
 

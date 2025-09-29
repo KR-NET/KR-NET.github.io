@@ -18,17 +18,18 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <!-- REMOVED FIREBASE COMPAT (GOT MODULAR ONE ANYWAYS) -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script> -->
 
     <link rel="icon" type="image/png" href="static/img/KRICON.png" />
 
     <!-- Immediate profile focus mode detection -->
     <script>
-      // Check for profile parameter immediately and add class before page renders
+      // Check for link parameter immediately and add class before page renders
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('profile')) {
+      if (urlParams.get('link')) {
         document.documentElement.classList.add('profile-focus-mode');
       }
 
@@ -88,6 +89,75 @@
         justify-content: center;
         align-items: center;
         z-index: 10000;
+      }
+
+      /* Connect Confirm Popup */
+      #connect-confirm-overlay {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100000;
+      }
+
+      #connect-confirm-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #connect-confirm-content {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 420px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        text-align: left;
+      }
+
+      #connect-confirm-content h2 {
+        margin: 0 0 8px 0;
+      }
+
+      .connect-confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      /* Simple toast */
+      #connect-toast {
+        position: fixed;
+        top: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #222;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px #0003;
+        z-index: 100001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        font-size: 1rem;
+      }
+
+      #connect-toast.visible {
+        opacity: 1;
       }
 
       #notification-popup-overlay.visible {
@@ -593,6 +663,9 @@
         <!-- Vision Mode UI -->
         <div id="vision-mode-controls">
           <button id="vision-mode-btn">Vision</button>
+          <button id="locate-me-btn" aria-label="Locate me" title="Locate me" style="display: none;">
+            <img src="static/img/locate.png" alt="Locate me" width="22" height="22" />
+          </button>
         </div>
       </div>
       <button id="notification-bell-btn" aria-label="Notifications">
@@ -667,8 +740,8 @@
               class="button-icon"
             />
             JOIN USER ON KR
-          </button></a
-        >
+          </button>
+        </a>
         <br />
 
         <div class="popup-footer">
@@ -680,11 +753,54 @@
       </div>
     </div>
 
+    <!-- Toast for connection success -->
+    <div id="connect-toast" role="status" aria-live="polite">Connection request sent</div>
+
+    <!-- Connect Confirm Popup -->
+    <div id="connect-confirm-overlay" aria-modal="true" role="dialog">
+      <div id="connect-confirm-content">
+        <span id="connect-confirm-close" class="close-popup-btn" style="position:absolute;top:10px;right:12px;font-size:24px;cursor:pointer;">&times;</span>
+        <h2>Confirm Connection</h2>
+        <p id="connect-confirm-text" style="margin-top:8px;">Connect with this user?</p>
+        <div class="connect-confirm-actions">
+          <button id="connect-cancel-btn" class="secondary">Cancel</button>
+          <button id="connect-confirm-btn">Yes</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="network-firebase-setup.js"></script>
     <script type="module" src="network-app.js"></script>
     <script src="loading-canvas-animation.js"></script>
     <script src="mobile-nav.js"></script>
     <script type="module" src="discover-feed.js"></script>
+    <script type="module">
+      import { getApp, getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+      import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js';
+
+      // Reuse existing app if already initialized by other modules
+      const app = getApps().length ? getApp() : initializeApp({
+        apiKey: "AIzaSyBWYRLFIudpqYdxCZXjiT7nGoJScKcwPv0",
+        authDomain: "kr-net-23.firebaseapp.com",
+        projectId: "kr-net-23",
+        storageBucket: "kr-net-23.firebasestorage.app",
+        messagingSenderId: "466657657759",
+        appId: "1:466657657759:web:83c5c245d1736b48eab3aa",
+        measurementId: "G-Z0XEDT1G9P"
+      });
+
+      try {
+        const analytics = getAnalytics(app);
+        // GA4 usually auto-collects page_view; this is an explicit event for clarity
+        logEvent(analytics, 'page_view', {
+          page_location: window.location.href,
+          page_title: document.title
+        });
+        console.log('[index] GA wired: page_view sent');
+      } catch (e) {
+        console.warn('[index] GA wiring failed', e);
+      }
+    </script>
 
     <script>
       // Join KR Popup functionality
@@ -978,7 +1094,7 @@
             Welcome to the<br /><span class="kr-network-text">KR NETWORK</span>
           </h1>
           <p class="beta-info">
-            (beta v1.4) 📍 <span class="location-text">LONDON</span>
+            (beta v1.6) 📍 <span class="location-text">LONDON</span>
           </p>
         </div>
 
@@ -1101,7 +1217,7 @@
         try { seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1'; } catch(e) { seen = false; }
         const search = (typeof window !== 'undefined' && window.location) ? window.location.search : '';
         const hasAnyQuery = search && search.length > 1;
-        const hasProfileQuery = new URLSearchParams(search).has('profile');
+        const hasProfileQuery = new URLSearchParams(search).has('link');
         window.__krHasQueryOnLoad = !!hasAnyQuery;
         window.__krHasProfileOnLoad = !!hasProfileQuery;
         if (seen || hasAnyQuery) {

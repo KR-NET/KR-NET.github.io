@@ -24,7 +24,7 @@
       color: #333;
     }
 
-    
+
 
     .profile-section,
     .blocks-section {
@@ -42,7 +42,7 @@
       margin-bottom: 15px;
       margin-top: 0px;
     }
-    
+
     .progress-bar-text {
       font-size: 0.8rem;
       color: #444444;
@@ -66,7 +66,8 @@
       top: 10px;
       right: 10px;
       font-size: 20px;
-      color: #888888; /* Grey color */
+      color: #888888;
+      /* Grey color */
       cursor: pointer;
       line-height: 1;
     }
@@ -102,9 +103,11 @@
       border-radius: 50%;
       position: absolute;
       top: 50%;
-      transform: translate(-50%, -50%); /* Center the circle on its 'left' position */
+      transform: translate(-50%, -50%);
+      /* Center the circle on its 'left' position */
       transition: background-color 0.3s ease;
-      z-index: 1; /* Ensure circles are above the progress bar fill */
+      z-index: 1;
+      /* Ensure circles are above the progress bar fill */
     }
 
     .progress-circle.filled {
@@ -127,7 +130,7 @@
     .practice-pill {
       border: 1px solid #ff8800;
       color: #ff8800;
-      background: none;
+      background: #f5f5f5;
       border-radius: 999px;
       padding: 4px 10px;
       font-size: 1em;
@@ -199,9 +202,20 @@
       overflow-y: auto;
     }
 
-    
-    .logout-container { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0; }
-    .logout-title { margin: 0; font-size: 1.4rem; font-weight: bold; color: #ffffff; }
+
+    .logout-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 8px 0;
+    }
+
+    .logout-title {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #ffffff;
+    }
 
     input,
     textarea {
@@ -220,7 +234,7 @@
       border-radius: 50px;
       cursor: pointer;
       font-size: 18px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     button.secondary {
@@ -312,11 +326,13 @@
     }
 
     .center-align {
-      display: block; /* Or inline-block if preferred for some contexts */
+      display: block;
+      /* Or inline-block if preferred for some contexts */
       margin-left: auto;
       margin-right: auto;
-      width: fit-content; 
-      text-align: center; /* Added for general centering of text within fit-content block */
+      width: fit-content;
+      text-align: center;
+      /* Added for general centering of text within fit-content block */
     }
 
     .input-feild {
@@ -329,6 +345,11 @@
       color: #535353;
       margin-top: 5px;
     }
+
+    /* Input with left icon wrapper for socials */
+    .input-with-icon { position: relative; margin-top: 5px; }
+    .input-with-icon .input-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; pointer-events: none; opacity: 0.85; }
+    .input-with-icon .input-feild { padding-left: 34px; margin-top: 0; }
 
     .top-margin {
       margin-top: 25px;
@@ -379,7 +400,8 @@
     }
 
     .default-icon::before {
-      display: none; /* Remove the pseudo-element */
+      display: none;
+      /* Remove the pseudo-element */
     }
 
     .large-image-icon {
@@ -427,6 +449,7 @@
       outline: 2px dashed #0000ff;
       background: #f3f7ff;
     }
+
     #carousel-slides-fields .slide-drag-handle {
       cursor: move;
       display: inline-flex;
@@ -440,21 +463,25 @@
       margin-bottom: 6px;
       transition: background 0.2s ease, transform 0.2s ease;
     }
+
     #carousel-slides-fields .slide-drag-handle:hover {
       background: #e0e0e0;
       color: #0000ff;
       transform: scale(1.05);
     }
+
     #carousel-slides-fields .slide-reorder-controls button {
       min-width: 36px;
       height: 28px;
       padding: 4px 8px;
       font-size: 14px;
     }
+
     .preview-carousel-slide.drag-over {
       outline: 2px dashed #0000ff;
       outline-offset: -6px;
     }
+
     .preview-carousel-slide.dragging {
       opacity: 0.7;
     }
@@ -546,6 +573,24 @@
       transform: translate(-50%, -50%);
       width: 48px;
       height: 48px;
+    }
+
+    .loading-help-link {
+      position: absolute;
+      top: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: none;
+      border: none;
+      color: #ffffff;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .loading-help-link:hover {
+      opacity: 1;
     }
 
     @keyframes spin {
@@ -817,11 +862,11 @@
       margin-top: 40px;
     }
 
-    .input-feild-title-text span{
+    .input-feild-title-text span {
       color: #ff0000;
     }
 
-  
+
     .popup-join-btn {
       background-color: #0000ff;
       /* Bright blue JOIN button */
@@ -844,7 +889,7 @@
       background-color: #0000cc;
       /* Darker blue on hover */
     }
-    
+
 
     /* Login button variant: orange & smaller text */
     #welcome-login-btn {
@@ -855,32 +900,38 @@
       font-size: 0.7rem;
       color: #FF8000;
     }
+
     #welcome-login-btn:hover {
       color: #00f;
     }
 
-    #practices-buttons{
+    #practices-buttons {
       display: flex;
       flex-wrap: wrap;
       row-gap: 1px;
       column-gap: 10px;
       /* margin-bottom: 10px; */
-      
+
     }
 
     .section-header {
-      display: flex; /* Align items in a row */
-      align-items: center; /* Vertically center items */
+      display: flex;
+      /* Align items in a row */
+      align-items: center;
+      /* Vertically center items */
       /* For headers that are also .center-align, this will center content within the fit-content block */
       /* For headers not .center-align, they will be left-aligned by default block behavior */
     }
 
     /* Adjust .center-align if it's on a .section-header to ensure flex behavior is maintained */
     .section-header.center-align {
-      position: relative; 
-      width: 100%; /* Override .center-align's fit-content for full width */
-      margin-left: 0; /* Override .center-align's auto margin */
-      margin-right: 0; /* Override .center-align's auto margin */
+      position: relative;
+      width: 100%;
+      /* Override .center-align's fit-content for full width */
+      margin-left: 0;
+      /* Override .center-align's auto margin */
+      margin-right: 0;
+      /* Override .center-align's auto margin */
       /* display: flex; and align-items: center; are inherited from .section-header */
     }
 
@@ -888,40 +939,52 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      width: 100%; /* Ensure it spans full width for proper text centering */
-      display: flex; 
+      width: 100%;
+      /* Ensure it spans full width for proper text centering */
+      display: flex;
       align-items: center;
-      justify-content: center; /* Center the actual text and help icon */
+      justify-content: center;
+      /* Center the actual text and help icon */
     }
 
     .header-step-number {
       border: 1px solid #000000;
-      display: inline-flex; /* Or just flex, since parent is flex */
+      display: inline-flex;
+      /* Or just flex, since parent is flex */
       align-items: center;
       justify-content: center;
-      width: 26px; /* Slightly larger for better text fit */
+      width: 26px;
+      /* Slightly larger for better text fit */
       height: 26px;
-      
+
       color: #ff8800;
-      border-radius: 50%; /* Makes it a circle */
-      font-size: 21px; /* Number size */
+      border-radius: 50%;
+      /* Makes it a circle */
+      font-size: 21px;
+      /* Number size */
       font-weight: bold;
-      margin-right: 12px; /* Space between circle and text */
-      flex-shrink: 0; /* Prevent circle from shrinking */
+      margin-right: 12px;
+      /* Space between circle and text */
+      flex-shrink: 0;
+      /* Prevent circle from shrinking */
     }
 
     .logo-auth-container {
-      position: relative; /* Establishes positioning context for absolute children */
+      position: relative;
+      /* Establishes positioning context for absolute children */
       width: 100%;
-      margin-bottom: 1rem; /* Spacing below this whole block */
-      min-height: 48px; /* Ensure container is tall enough for logo and buttons */
+      margin-bottom: 1rem;
+      /* Spacing below this whole block */
+      min-height: 48px;
+      /* Ensure container is tall enough for logo and buttons */
     }
 
     .logo-auth-container .krlogo {
       position: absolute;
       left: 50%;
       top: 50%;
-      transform: translate(-50%, -50%); /* Centers the logo horizontally and vertically */
+      transform: translate(-50%, -50%);
+      /* Centers the logo horizontally and vertically */
       /* width & height are set inline on the img tag */
     }
 
@@ -929,18 +992,24 @@
       position: absolute;
       right: 0;
       top: 50%;
-      transform: translateY(-50%); /* Vertically centers the auth section */
-      text-align: right; /* Aligns button and text within auth-section to the right */
-      margin-bottom: 0; /* Reset margin for this specific auth-section */
+      transform: translateY(-50%);
+      /* Vertically centers the auth section */
+      text-align: right;
+      /* Aligns button and text within auth-section to the right */
+      margin-bottom: 0;
+      /* Reset margin for this specific auth-section */
     }
 
     .logo-auth-container .auth-section button {
-      margin-top: 0; /* Remove any top margin from general button styles */
-      margin-bottom: 4px; /* Optional: space between button and text if stacked */
+      margin-top: 0;
+      /* Remove any top margin from general button styles */
+      margin-bottom: 4px;
+      /* Optional: space between button and text if stacked */
     }
 
     .logo-auth-container .auth-section .background-text {
-      margin: 0; /* Reset margins for the user info paragraph */
+      margin: 0;
+      /* Reset margins for the user info paragraph */
       /* text-align: right; is inherited from .auth-section */
     }
 
@@ -955,6 +1024,7 @@
         opacity: 0;
         transform: translateY(20px);
       }
+
       to {
         opacity: 1;
         transform: translateY(0);
@@ -964,9 +1034,11 @@
     #welcome-slide-1 .info-text-container:nth-of-type(1) {
       animation-delay: 0.4s;
     }
+
     #welcome-slide-1 .info-text-container:nth-of-type(2) {
       animation-delay: 0.8s;
     }
+
     #welcome-slide-1 .info-text-container:nth-of-type(3) {
       animation-delay: 1.2s;
     }
@@ -986,12 +1058,15 @@
     .welcome-slider.show-slide-2 .steps-list li:nth-child(1) {
       transition-delay: 0.4s;
     }
+
     .welcome-slider.show-slide-2 .steps-list li:nth-child(2) {
       transition-delay: 0.6s;
     }
+
     .welcome-slider.show-slide-2 .steps-list li:nth-child(3) {
       transition-delay: 0.8s;
     }
+
     .welcome-slider.show-slide-2 .steps-list li:nth-child(4) {
       transition-delay: 1.0s;
     }
@@ -1001,6 +1076,7 @@
       opacity: 0;
       transform: translateY(20px);
     }
+
     .welcome-slider.show-slide-2 #welcome-slide-2 .ready-text {
       opacity: 1;
       transform: translateY(0);
@@ -1014,11 +1090,14 @@
       opacity: 0;
       transition: opacity 0.3s ease-in-out;
     }
+
     #save-status.visible {
       opacity: 1;
     }
+
     #save-status.saved {
-      color: #27ae60; /* Green for success */
+      color: #27ae60;
+      /* Green for success */
       font-weight: bold;
     }
 
@@ -1027,7 +1106,7 @@
       background: white;
       border-radius: 12px;
       margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       transition: background-color 0.3s;
     }
 
@@ -1039,12 +1118,12 @@
       background-color: #e6e6e6;
       border-radius: 8px;
     }
-    
+
     .collapsible-header .header-step-number {
       margin-right: 1rem;
       flex-shrink: 0;
     }
-    
+
     .collapsed-avatar {
       width: 40px;
       height: 40px;
@@ -1079,7 +1158,8 @@
 
     .collapsible-content {
       padding: 0px;
-      max-height: 2000px; /* Large value for open state */
+      max-height: 2000px;
+      /* Large value for open state */
       overflow: hidden;
       transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
       background-color: #e6e6e6;
@@ -1095,23 +1175,29 @@
       padding-top: 0;
       padding-bottom: 0;
     }
-    
+
     .collapsible-section.collapsed .chevron {
       transform: rotate(0deg);
     }
+
     .collapsible-section:not(.collapsed) .collapsible-header {
       border-bottom: 1px solid #eee;
     }
 
     .help-banner {
       align-items: center;
-      gap: 8px; /* Adds space between icon and text */
+      gap: 8px;
+      /* Adds space between icon and text */
     }
+
     .help-banner .help-icon {
-      margin: 0; /* Override margin from other rules */
+      margin: 0;
+      /* Override margin from other rules */
     }
+
     .help-banner p {
-      margin: 0; /* Removes default paragraph margin */
+      margin: 0;
+      /* Removes default paragraph margin */
     }
 
     @media (max-width: 768px) {
@@ -1120,15 +1206,18 @@
       }
     }
 
-    .profile-container, .page-content-wrapper {
+    .profile-container,
+    .page-content-wrapper {
       overflow: visible;
     }
 
     #preview-btn-container {
       position: fixed;
-      bottom:10px; /* Above mobile nav */
+      bottom: 10px;
+      /* Above mobile nav */
       left: 50%;
-      transform: translate(-50%, 24px); /* off-screen by default */
+      transform: translate(-50%, 24px);
+      /* off-screen by default */
       z-index: 1000;
       transition: all 0.3s ease;
       opacity: 0;
@@ -1139,9 +1228,18 @@
       #preview-btn-container {
         bottom: 40px;
       }
+
       /* Stack preview label into two lines for mobile */
-      #preview-page-btn .label-top { display: block !important; line-height: 1.05; }
-      #preview-page-btn .label-bottom { display: block !important; line-height: 1.05; margin-left: 0; }
+      #preview-page-btn .label-top {
+        display: block !important;
+        line-height: 1.05;
+      }
+
+      #preview-page-btn .label-bottom {
+        display: block !important;
+        line-height: 1.05;
+        margin-left: 0;
+      }
     }
 
     #preview-page-btn {
@@ -1154,9 +1252,19 @@
       gap: 8px;
       transition: all 0.2s ease-in-out;
     }
-    #preview-page-btn .label-wrap { display: inline-block; text-align: left; }
-    #preview-page-btn .label-top { display: inline; }
-    #preview-page-btn .label-bottom { display: inline; }
+
+    #preview-page-btn .label-wrap {
+      display: inline-block;
+      text-align: left;
+    }
+
+    #preview-page-btn .label-top {
+      display: inline;
+    }
+
+    #preview-page-btn .label-bottom {
+      display: inline;
+    }
 
     /* Slide-in state */
     #preview-btn-container.show {
@@ -1183,14 +1291,19 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0, 0, 0, 0.85);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 10010;
-      overflow: hidden; /* prevent horizontal scroll */
+      overflow: hidden;
+      /* prevent horizontal scroll */
     }
-    .onboard-overlay.visible { display: flex; }
+
+    .onboard-overlay.visible {
+      display: flex;
+    }
+
     .onboard-modal {
       width: 100%;
       margin: 7px;
@@ -1201,10 +1314,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      overflow: hidden; /* keep footer pinned */
+      overflow: hidden;
+      /* keep footer pinned */
       padding: 15px;
       box-sizing: border-box;
     }
+
     .onboard-header {
       width: 100%;
       max-width: 420px;
@@ -1214,11 +1329,12 @@
       padding: 16px 12px 0 12px;
       position: relative;
     }
+
     @media (max-width: 768px) {
       .onboard-title {
         max-width: 70vw;
+      }
     }
-  }
 
     .onboard-back {
       background: none;
@@ -1230,6 +1346,7 @@
       line-height: 1;
       visibility: hidden;
     }
+
     .onboard-title {
       margin: 0;
       text-align: center;
@@ -1240,15 +1357,26 @@
       width: calc(100% - 24px);
       pointer-events: none;
     }
-    .onboard-step-title{ font-weight: bold; font-size: 18px; text-align: center; margin: 6px 0 2px 0; }
+
+    .onboard-step-title {
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+      margin: 6px 0 2px 0;
+    }
+
     .onboard-body {
       width: 100%;
       max-width: 420px;
-      padding: 10px 12px 20px 12px;
-      flex: 1; /* take remaining height */
-      overflow-y: auto; /* scroll content, not footer */
-      overflow-x: hidden; /* prevent horizontal scroll */
+      /* padding: 10px 12px 20px 12px; */
+      flex: 1;
+      /* take remaining height */
+      overflow-y: auto;
+      /* scroll content, not footer */
+      overflow-x: hidden;
+      /* prevent horizontal scroll */
     }
+
     .onboard-avatar {
       width: 96px;
       height: 96px;
@@ -1258,35 +1386,203 @@
       display: block;
       margin: 10px auto;
     }
+
     @media (min-width: 768px) {
       .onboard-avatar {
         width: 80px;
         height: 80px;
       }
     }
+
     .onboard-upload-btn {
       display: block;
       margin: 6px auto 8px auto;
-      background: #8d8d8d;
+      background: #00f;
       font-size: 14px;
       padding: 6px 12px;
       border-radius: 20px;
     }
+
     /* Ensure cropping modal overlays onboarding */
-    .cropper-container { z-index: 10060 !important; }
-    .onboard-input { width: 100%; }
-    .onboard-hint { font-size: 12px; color: #6e6e6e; margin-top: 4px; }
-    .onboard-counter { font-size: 12px; color: #6e6e6e; float: right; }
-    .onboard-practices { display: flex; flex-wrap: wrap; gap: 0 8px; margin-top: 6px; font-size: 14px; }
-    .onboard-footer { margin-top: auto; background: #e6e6e6; width: 100%; max-width: 420px; }
-    .onboard-actions { background: #e6e6e6; width: 100%; display: flex; gap: 10px; justify-content: space-between;  }
-    .onboard-next { flex: 1; }
-    .onboard-skip { background: #999; }
-    .onboard-steps { margin: 6px auto 12px auto; display: flex; gap: 6px; justify-content: center; }
-    .onboard-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
-    .onboard-dot.active { background: #0000ff; }
+    .cropper-container {
+      z-index: 10060 !important;
+    }
+
+    .onboard-input {
+      width: 100%;
+    }
+
+    .onboard-hint {
+      font-size: 12px;
+      color: #6e6e6e;
+      margin-top: 4px;
+    }
+
+    .onboard-counter {
+      font-size: 12px;
+      color: #6e6e6e;
+      float: right;
+    }
+
+    .onboard-practices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 7px;
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    .onboard-footer {
+      margin-top: auto;
+      background: #e6e6e6;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .onboard-actions {
+      background: #e6e6e6;
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .onboard-next {
+      flex: 1;
+    }
+
+    .onboard-skip {
+      background: #999;
+    }
+
+    .onboard-steps {
+      margin: 6px auto 12px auto;
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .onboard-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #aaa;
+    }
+
+    .onboard-dot.active {
+      background: #0000ff;
+    }
+
     /* Disabled state for Continue button (steps 1-3) */
-    #onboard-next:disabled { background: #bbb; color: #eee; cursor: not-allowed; }
+    #onboard-next:disabled {
+      background: #bbb;
+      color: #eee;
+      cursor: not-allowed;
+    }
+
+    /* Onboarding social input open-link button */
+    .onboard-input-wrap {
+      position: relative;
+    }
+
+    .onboard-input-wrap .onboard-input {
+      padding-right: 36px;
+      padding-left: 44px;
+    }
+    .onboard-left-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; pointer-events: none; opacity: 0.85; }
+
+    .onboard-open-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #0000ff;
+      opacity: 0.9;
+      padding: 0;
+    }
+
+    .onboard-open-btn:hover:not(:disabled) {
+      opacity: 1;
+    }
+
+    .onboard-open-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    /* Onboard: gentle shake animation for Continue button */
+    @keyframes kr-shake {
+      0% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(6px); }
+      45% { transform: translateX(-5px); }
+      60% { transform: translateX(5px); }
+      75% { transform: translateX(-3px); }
+      90% { transform: translateX(3px); }
+      100% { transform: translateX(0); }
+    }
+    .shake-once {
+      animation: kr-shake 0.45s ease;
+    }
+
+    /* Avatar nudge popup overlay (appears within onboarding) */
+    .onboard-nudge-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10020; /* Above onboarding (10010) and help (10000) */
+    }
+    .onboard-nudge-overlay.visible { display: flex; }
+    .onboard-nudge-content {
+      background: #ffffff;
+      color: #000000;
+      padding: 16px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 360px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+    .onboard-nudge-title {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: left;
+    }
+    .onboard-nudge-text {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    .onboard-nudge-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .onboard-nudge-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: #666;
+      cursor: pointer;
+      line-height: 1;
+    }
   </style>
 </head>
 
@@ -1298,17 +1594,14 @@
   </button>
 
   <div id="mobile-side-nav">
-    <a
-      href="profile.html"
-      id="mobile-logged-in-user-status"
-      style="display: none; text-decoration: none"
-    >
+    <a href="profile.html" id="mobile-logged-in-user-status" style="display: none; text-decoration: none">
       <img id="mobile-logged-in-user-avatar" src="" alt="User Avatar" />
       <span id="mobile-logged-in-user-text"></span>
     </a>
     <a href="index.html">NETWORK</a>
     <a href="collab.html">COLLAB</a>
-    <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E Productions</a></p>
+    <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E
+        Productions</a></p>
   </div>
 
   <!-- Loading Screen -->
@@ -1316,12 +1609,15 @@
     <div class="loading-container">
       <div class="loading-circle"></div>
       <img src="static/img/KRSPIN-optimize.gif" alt="Loading..." class="loading-logo">
+      <button id="loading-help" class="loading-help-link" style="display:none;">Still loading? Reload the page</button>
     </div>
   </div>
 
   <nav class="kr-navbar">
-    <a href="index.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/networkicon.png" class="nav-icon" alt="Network"> NETWORK</a>
-    <a href="collab.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/collabicon.png" class="nav-icon" alt="Collab"> COLLAB</a>
+    <a href="index.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/networkicon.png"
+        class="nav-icon" alt="Network"> NETWORK</a>
+    <a href="collab.html" style="text-decoration:none;color:#ffffff;"><img src="static/img/collabicon.png"
+        class="nav-icon" alt="Collab"> COLLAB</a>
     <!-- <a href="profile.html" style="text-decoration:none;color:#0000ff;">JOIN</a> -->
   </nav>
 
@@ -1332,8 +1628,8 @@
     <div class="profile-container">
       <div class="logo-auth-container">
         <a href="index.html" style="text-decoration: none;">
-        <img class="krlogo" src="static/img/KRSPIN-optimize.gif" alt="KR LOGO" style="width:48px;height:48px;">
-      </a>
+          <img class="krlogo" src="static/img/KRSPIN-optimize.gif" alt="KR LOGO" style="width:48px;height:48px;">
+        </a>
         <div class="auth-section">
           <button id="login-btn">Login with Google</button>
         </div>
@@ -1344,7 +1640,7 @@
         <h3 class="logout-title">YOUR PROFILE:</h3>
         <button id="logout-btn" style="display: none;">LOG OUT</button>
       </div>
-      
+
       <div class="profile-progress-section" id="profileProgressSection">
         <span class="close-progress-btn" id="closeProgressSectionBtn">&times;</span>
         <p class="center-align profile-progress-title">You Are On Track To Building Your Profile!</p>
@@ -1357,25 +1653,28 @@
             <div class="progress-circle" id="progressCircle4" style="left: 100%;"></div>
           </div>
         </div>
-        <p class="progress-bar-text center-align" id="progressTextDetails">Please fill in your details below to get started</p>
-        <p class="progress-bar-text center-align" id="progressTextConnect" style="display: none;">Connect with others</p>
+        <p class="progress-bar-text center-align" id="progressTextDetails">Please fill in your details below to get
+          started</p>
+        <p class="progress-bar-text center-align" id="progressTextConnect" style="display: none;">Connect with others
+        </p>
         <p class="progress-bar-text center-align" id="progressTextBuild" style="display: none;">Build your page</p>
-        <p class="progress-bar-text center-align" id="progressTextComplete" style="display: none;">🎉 You're all set up!</p>
+        <p class="progress-bar-text center-align" id="progressTextComplete" style="display: none;">🎉 You're all set up!
+        </p>
       </div>
 
-     
+
 
       <div class="collapsible-section" id="profile-collapsible-section">
         <div class="collapsible-header">
-            <span class="header-step-number">1</span>
-            <img id="collapsed-avatar-preview" class="collapsed-avatar" src="static/img/default-avatar.png">
-            <div class="collapsed-text">
-                <strong id="collapsed-title">YOUR PROFILE</strong>
-                <small>Manage Your Profile</small>
-            </div>
-            <span class="chevron"></span>
+          <span class="header-step-number">1</span>
+          <img id="collapsed-avatar-preview" class="collapsed-avatar" src="static/img/default-avatar.png">
+          <div class="collapsed-text">
+            <strong id="collapsed-title">YOUR PROFILE</strong>
+            <small>Manage Your Profile</small>
+          </div>
+          <span class="chevron"></span>
         </div>
-        
+
         <div class="collapsible-content">
 
           <div class="help-banner" data-help="profile-help-btn">
@@ -1384,39 +1683,49 @@
           </div>
 
           <div class="collapsible-content-inner">
-            
-            <!-- Re-introducing the main avatar and title for the expanded view -->
-          <img id="avatar-preview" class="avatar-preview" src="static/img/default-avatar.png" alt="Avatar" />
-          <div id="profile-title-display" class="center-align" style="margin-bottom: 10px; font-weight: bold; font-size: 1.1em;"></div>
 
-          <!-- Existing Profile Section Content -->
-          <div class="file-upload-wrapper" style="margin-top:0.5rem;">
-            <button class="file-upload-button">Change Profile Picture</button>
-            <span class="file-upload-name"> </span>
-            <input type="file" id="avatar-upload" accept="image/*" class="file-upload-input">
+            <!-- Re-introducing the main avatar and title for the expanded view -->
+            <img id="avatar-preview" class="avatar-preview" src="static/img/default-avatar.png" alt="Avatar" />
+            <div id="profile-title-display" class="center-align"
+              style="margin-bottom: 10px; font-weight: bold; font-size: 1.1em;"></div>
+
+            <!-- Existing Profile Section Content -->
+            <div class="file-upload-wrapper" style="margin-top:0.5rem;">
+              <button class="file-upload-button">Change Profile Picture</button>
+              <span class="file-upload-name"> </span>
+              <input type="file" id="avatar-upload" accept="image/*" class="file-upload-input">
+            </div>
+            <div class="input-feild-title">
+              <p class="input-feild-title-text">Your Name<span>*</span></p>
+            </div>
+            <input type="text" class="input-feild " id="profile-title" placeholder="Profile Title">
+            <div class="input-feild-title">
+              <p class="input-feild-title-text">Bio<span>*</span></p>
+            </div>
+            <textarea id="bio" class="input-feild" rows="3" placeholder="Add your bio..."></textarea>
+            <div class="input-feild-title">
+              <p class="input-feild-title-text">Socials</p>
+            </div>
+            <div class="input-with-icon">
+              <img class="input-icon" src="static/img/instagram.svg" alt="" aria-hidden="true">
+              <input type="url" class="input-feild" id="instagram" placeholder="Instagram URL or @Handle">
+            </div>
+            <div class="input-with-icon">
+              <img class="input-icon" src="static/img/youtube.svg" alt="" aria-hidden="true">
+              <input type="url" class="input-feild" id="youtube" placeholder="YouTube URL or @Handle">
+            </div>
+            <div class="input-with-icon">
+              <img class="input-icon" src="static/img/tiktok.svg" alt="" aria-hidden="true">
+              <input type="url" class="input-feild" id="tiktok" placeholder="TikTok URL or @Handle">
+            </div>
+            <div id="practices-section" style="margin: 24px 0 16px 0;">
+              <label style="font-weight:bold;display:block;margin-bottom:8px;">Select Your Creative Practices:</label>
+              <div id="practices-buttons"></div>
+            </div>
+            <span id="save-status"></span>
+            <!-- End of Profile Section Content -->
           </div>
-          <div class="input-feild-title">
-            <p class="input-feild-title-text">Your Name<span>*</span></p>
-          </div>
-          <input type="text" class="input-feild " id="profile-title" placeholder="Profile Title">
-          <div class="input-feild-title">
-            <p class="input-feild-title-text">Bio<span>*</span></p>
-          </div>
-          <textarea id="bio" class="input-feild" rows="3" placeholder="Add your bio..."></textarea>
-          <div class="input-feild-title">
-            <p class="input-feild-title-text">Socials</p>
-          </div>
-          <input type="url" class="input-feild" id="instagram" placeholder="Instagram URL">
-          <input type="url" class="input-feild" id="youtube" placeholder="YouTube URL">
-          <input type="url" class="input-feild" id="tiktok" placeholder="TikTok URL">
-          <div id="practices-section" style="margin: 24px 0 16px 0;">
-            <label style="font-weight:bold;display:block;margin-bottom:8px;">Select Your Creative Practices:</label>
-            <div id="practices-buttons"></div>
-          </div>
-          <span id="save-status"></span>
-          <!-- End of Profile Section Content -->
-          </div>
-          
+
         </div>
       </div>
 
@@ -1425,9 +1734,9 @@
         <div class="collapsible-header">
           <span class="header-step-number">2</span>
           <div class="collapsed-text">
-              <strong>Add Your Connections</strong>
-              <small>To Position yourself in the network, connect with others you've worked with.</small>
-              
+            <strong>Manage Connections</strong>
+            <small>To Position yourself in the network, connect with others you've worked with.</small>
+
           </div>
           <span class="chevron"></span>
         </div>
@@ -1446,7 +1755,7 @@
       </div>
 
       <div class="section-spacer"></div>
-      
+
       <div class="blocks-section">
         <h2 class="section-header blocks-section-header">
           <span class="header-step-number">3</span>
@@ -1466,17 +1775,19 @@
       <div class="modal" id="block-modal">
         <div class="modal-content">
           <h3 id="modal-title">Add Link</h3>
-          
+
           <div id="block-url-container">
             <p class="input-feild-title-text">URL:</p>
             <input type="url" id="block-link" placeholder="Paste a link to get started...">
             <div id="url-loading-indicator"></div>
-            <p id="url-instruction" style="font-size: 0.9em; color: #6e6e6e; margin-top: 8px; font-style: italic;">Enter a valid URL to continue with link creation</p>
+            <p id="url-instruction" style="font-size: 0.9em; color: #6e6e6e; margin-top: 8px; font-style: italic;">Enter
+              a valid URL to continue with link creation</p>
             <div id="embed-options" style="margin-top:8px; display:none;">
               <p class="input-feild-title-text">Or, Embed:</p>
               <button id="embed-youtube-btn" class="secondary" type="button" disabled>Embed YouTube</button>
               <button id="embed-spotify-btn" class="secondary" type="button" disabled>Embed Spotify</button>
-              <p id="embed-hint" style="font-size: 0.85em; color: #6e6e6e; margin-top: 6px;">Paste a YouTube or Spotify link above, then choose an embed option.</p>
+              <p id="embed-hint" style="font-size: 0.85em; color: #6e6e6e; margin-top: 6px;">Paste a YouTube or Spotify
+                link above, then choose an embed option.</p>
             </div>
           </div>
 
@@ -1495,9 +1806,9 @@
                 <div class="block-type-label">Slide Carousel</div>
               </div>
             </div>
-  
+
             <div id="block-live-preview" style="display: none; margin-bottom: 1rem;"></div>
-            
+
             <div id="block-fields-default-large">
               <div id="block-details-container" style="display: none;">
                 <p class="input-feild-title-text" style="margin-top: 10px;">Title:</p>
@@ -1509,7 +1820,7 @@
                 <div id="image-preview" style="margin-top: 10px;"></div>
               </div>
             </div>
-            
+
             <div id="block-fields-carousel" style="display:none;">
               <div id="carousel-slides-fields"></div>
               <button id="add-carousel-slide" type="button">+ Add Slide</button>
@@ -1517,7 +1828,7 @@
           </div>
 
 
-          
+
 
 
           <div style="margin-top: 20px; margin-bottom: 100px;">
@@ -1528,16 +1839,7 @@
         </div>
       </div>
 
-      <div class="modal" id="connections-modal">
-        <div class="modal-content" style="max-width:420px;">
-          <button id="close-connections-modal"
-            style="float:right;font-size:1.3em;background:none;border:none;cursor:pointer;color: red;">&times;</button>
-          <h3>Manage Connections</h3>
-          <input type="text" id="connections-search" placeholder="Search users by title..."
-            style="width:100%;margin-bottom:1rem;">
-          <div id="connections-modal-list" style="max-height:350px;overflow-y:auto;"></div>
-        </div>
-      </div>
+      
 
       <!-- Help Modal -->
       <div class="help-modal" id="help-modal">
@@ -1551,48 +1853,24 @@
   </div>
 
   <div class="kr-mobile-navbar-container">
-    <img
-      src="static/img/navbarbarboder.svg"
-      class="mobile-navbar-border"
-      alt=""
-    />
-    <img
-      src="static/img/navbar.svg"
-      class="mobile-navbar-border border-background"
-      alt=""
-    />
+    <img src="static/img/navbarbarboder.svg" class="mobile-navbar-border" alt="" />
+    <img src="static/img/navbar.svg" class="mobile-navbar-border border-background" alt="" />
     <div class="kr-mobile-navbar-bottom-line"></div>
 
     <div class="kr-mobile-navbar">
       <a href="index.html">
         <div class="mobile-nav-item">
-          <img
-            src="static/img/networkborder.svg"
-            class="mobile-nav-bg"
-            alt=""
-          />
-          <img
-            src="static/img/networkicon.png"
-            class="mobile-nav-icon"
-            alt="Network"
-          />
+          <img src="static/img/networkborder.svg" class="mobile-nav-bg" alt="" />
+          <img src="static/img/networkicon.png" class="mobile-nav-icon" alt="Network" />
         </div>
       </a>
       <a href="collab.html">
         <div class="mobile-nav-item">
-          <img
-            src="static/img/collabborder.svg"
-            class="mobile-nav-bg"
-            alt=""
-          />
-          <img
-            src="static/img/collabicon.png"
-            class="mobile-nav-icon"
-            alt="Collab"
-          />
+          <img src="static/img/collabborder.svg" class="mobile-nav-bg" alt="" />
+          <img src="static/img/collabicon.png" class="mobile-nav-icon" alt="Collab" />
         </div>
       </a>
-      
+
     </div>
   </div>
 
@@ -1606,7 +1884,7 @@
     <div class="onboard-modal">
       <div class="onboard-header">
         <button id="onboard-back" class="onboard-back" aria-label="Back">&#x2039;</button>
-        <div class="onboard-title">Welcome to KR, let’s create your profile!:</div>
+        <div class="onboard-title">Welcome to KR, let’s create your profile!</div>
       </div>
       <div class="onboard-body" id="onboard-body">
         <!-- Step content injected by JS -->
@@ -1636,7 +1914,7 @@
       <div class="welcome-slider">
         <div class="welcome-slide" id="welcome-slide-1">
           <h2 class="welcome-popup-title">Welcome to the<br><span>KR NETWORK</span></h2>
-          <p class="beta-version">(beta v1.0) 📍 <span style="color: #5F5F5F;"> LONDON</span></p>
+          <p class="beta-version">(beta v1.6) 📍 <span style="color: #5F5F5F;"> LONDON</span></p>
           <p class="tagline">Built by creatives,<br>For creatives & our<br>communities</p>
           <!-- <hr class="popup-divider"> -->
           <div class="info-text-container">
@@ -1647,53 +1925,57 @@
               opportunities. </p>
           </div>
           <div class="info-text-container">
-            <p class="info-text"> <strong>Centralise your presence: </strong> Showcase your work in one dynamic hub which
+            <p class="info-text"> <strong>Centralise your presence: </strong> Showcase your work in one dynamic hub
+              which
               you can use to redirect audiences to all your work & socials. </p>
           </div>
 
           <h3>Join the movement, platform your own community. </h3>
-          <p class="info-text-small">*Please note, the network is still in development, and only available in London.</p>
+          <p class="info-text-small">*Please note, the network is still in development, and only available in London.
+          </p>
           <button id="welcome-start-btn" class="popup-start-btn">GET STARTED &rarr;</button><br>
-          <button id="welcome-login-btn" class="popup-join-btn" style="margin-top:0px;">Already have an account? Log In!</button>
+          <button id="welcome-login-btn" class="popup-join-btn" style="margin-top:0px;">Already have an account? Log
+            In!</button>
           <!-- <p class="info-text2">By signing up with Google, you accept our <a href="terms.html" target="_blank" class="popup-link">terms &amp; conditions</a>.</p> -->
         </div>
         <div class="welcome-slide" id="welcome-slide-2">
-            <a href="#" id="back-to-slide-1" class="welcome-back-btn">&lt;- back</a>
-            <h2 class="welcome-steps-title"><br>LET'S GET STARTED</h2>
-            <p class="welcome-steps-subtitle">This is what we're about to do to get you going:</p>
-            <ol class="steps-list">
-                <li>
-                    <div class="step-number">1</div>
-                    <div class="step-text">
-                        <strong>Create Your Account</strong>
-                        <small>Sign up with Google</small>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-number">2</div>
-                    <div class="step-text">
-                        <strong>Build Your Profile</strong>
-                        <small>Setup, Build & Connect</small>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-number">3</div>
-                    <div class="step-text">
-                        <strong>Navigate the Network</strong>
-                        <small>Find creatives & collaborations</small>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-number">4</div>
-                    <div class="step-text">
-                        <strong>Maximise Your Presence</strong>
-                        <small>Be seen</small>
-                    </div>
-                </li>
-            </ol>
-            <p class="ready-text">Ready?</p>
-            <button id="welcome-join-btn" class="popup-join-btn return-user">CREATE YOUR ACCOUNT &rarr;</button>
-            <p class="info-text2">By signing up with Google, you accept our <a href="terms.html" target="_blank" class="popup-link">terms &amp; conditions</a>.</p>
+          <a href="#" id="back-to-slide-1" class="welcome-back-btn">&lt;- back</a>
+          <h2 class="welcome-steps-title"><br>LET'S GET STARTED</h2>
+          <p class="welcome-steps-subtitle">This is what we're about to do to get you going:</p>
+          <ol class="steps-list">
+            <li>
+              <div class="step-number">1</div>
+              <div class="step-text">
+                <strong>Create Your Account</strong>
+                <small>Sign up with Google</small>
+              </div>
+            </li>
+            <li>
+              <div class="step-number">2</div>
+              <div class="step-text">
+                <strong>Build Your Profile</strong>
+                <small>Setup, Build & Connect</small>
+              </div>
+            </li>
+            <li>
+              <div class="step-number">3</div>
+              <div class="step-text">
+                <strong>Navigate the Network</strong>
+                <small>Find creatives & collaborations</small>
+              </div>
+            </li>
+            <li>
+              <div class="step-number">4</div>
+              <div class="step-text">
+                <strong>Maximise Your Presence</strong>
+                <small>Be seen</small>
+              </div>
+            </li>
+          </ol>
+          <p class="ready-text">Ready?</p>
+          <button id="welcome-join-btn" class="popup-join-btn return-user">CREATE YOUR ACCOUNT &rarr;</button>
+          <p class="info-text2">By signing up with Google, you accept our <a href="terms.html" target="_blank"
+              class="popup-link">terms &amp; conditions</a>.</p>
         </div>
       </div>
     </div>
@@ -1701,8 +1983,13 @@
 
   <div id="preview-btn-container">
     <button id="preview-page-btn" style="display: none;" disabled>
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-      <span class="label-wrap"><span class="label-top">[PREVIEW]</span><span class="label-bottom">YOUR PAGE</span></span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <span class="label-wrap"><span class="label-top">[PREVIEW]</span><span class="label-bottom">YOUR
+          PAGE</span></span>
     </button>
   </div>
 
@@ -1713,3 +2000,161 @@
 </body>
 
 </html>
+<!-- Connections Onboarding Modal -->
+<div id="conn-onboard-overlay" class="onboard-overlay" aria-modal="true" role="dialog" style="display:none;">
+  <div class="onboard-modal">
+    <div class="onboard-header">
+      <button id="conn-onboard-back" class="onboard-back" aria-label="Back">&#x2039;</button>
+      <div id="conn-onboard-title" class="onboard-title">Welcome to the Network!</div>
+    </div>
+    <div class="onboard-body" id="conn-onboard-body"><!-- step content injected by JS --></div>
+    <div class="onboard-footer">
+      <div class="onboard-actions">
+        <button id="conn-onboard-skip" class="onboard-skip" type="button" style="display:none;">Skip for now</button>
+        <button id="conn-onboard-next" class="onboard-next" type="button">Continue</button>
+      </div>
+      <div class="onboard-steps" id="conn-onboard-steps">
+        <div class="onboard-dot" data-step="0"></div>
+        <div class="onboard-dot" data-step="1"></div>
+        <div class="onboard-dot" data-step="2"></div>
+        <div class="onboard-dot" data-step="3"></div>
+      </div>
+    </div>
+  </div>
+  <style>
+    /* Connections onboard specific tweaks */
+    #conn-web-wrap {
+      width: 100%;
+      max-width: 420px;
+      margin: 8px auto 10px auto;
+      background: #111;
+      border-radius: 20px;
+      position: relative;
+      /* overflow: hidden; */
+    }
+
+    #conn-web-svg {
+      width: 100%;
+      /* height: 220px; */
+      display: block;
+      background: #111;
+      border-radius: 8px;
+    }
+
+    .conn-overlay {
+      position: absolute;
+      inset: 0;
+      padding: 12px;
+      pointer-events: none; /* allow pan/zoom on empty areas */
+      /* display: flex; */
+      flex-direction: column;
+      gap: 230px;
+    }
+
+    .conn-search {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0 12px 0 44px; /* leave space for search icon */
+      border: 1px solid #ffffff;
+      border-radius: 32px;
+      margin: 0px;
+      height: 44px;
+      background: #000;
+      color: #ccc;
+      outline: none;
+      font-size: 1.05em;
+      position: relative;
+      pointer-events: auto;
+    }
+    .conn-search::placeholder { color: #888; }
+    /* Search icon inside input (using a background image similar to index) */
+    .conn-search {
+      background-image: url('static/img/search.png');
+      background-repeat: no-repeat;
+      background-size: 22px 22px;
+      background-position: 12px center;
+    }
+
+    .conn-panel {
+      pointer-events: auto; /* interactive */
+      margin-top: 160px; /* push to bottom */
+      background: #0f0f0f;
+      color: #fff;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 12px;
+      box-shadow: 0 6px 10px rgba(0,0,0,0.4);
+      overflow: hidden;
+      height: 30vh;
+    }
+
+    .conn-panel-title {
+      font-weight: 800;
+      font-size: 20px;
+      margin: 2px 0 8px 4px;
+    }
+
+    .conn-list {
+      max-height: 280px;
+      overflow-y: auto;
+      background: #0f0f0f;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .conn-panel .conn-list { max-height: 50vh; border: none; padding: 0; background: transparent; }
+
+    .conn-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .conn-row .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .conn-row img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .conn-row button {
+      min-width: 140px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .btn-blue {
+      background: #0000ff;
+      color: #fff;
+      border: none;
+    }
+
+    .btn-grey {
+      background: #808080;
+      color: #fff;
+      border: none;
+    }
+
+    .btn-red {
+      background: #cc0000;
+      color: #fff;
+      border: none;
+    }
+
+    .conn-hint {
+      font-size: 12px;
+      color: #6e6e6e;
+      margin: 6px 0;
+    }
+  </style>
+</div>

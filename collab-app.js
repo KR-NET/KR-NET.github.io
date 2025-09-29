@@ -395,8 +395,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // The read-more button will contain the fully linkified text
             const readMoreButton = isLong ? `<button class="read-more-btn" data-full-info="${escape(linkifiedInfo)}">Read More</button>` : '';
 
-            const authorLink = post.authorId 
-                ? `<a href="/?profile=${post.authorId}" target="_blank" class="view-profile-btn primary-btn">Connect With ${post.authorDisplayName.split(' ')[0]}</a>` 
+            const authorLink = post.authorDisplayName 
+                ? `<a href="/?link=${post.authorDisplayName.toLowerCase().replace(/\s+/g,'')}" target="_blank" class="view-profile-btn primary-btn">Connect With ${post.authorDisplayName.split(' ')[0]}</a>` 
                 : '';
 
             const expiredBadge = isExpired ? '<span class="post-expired-badge">POST EXPIRED</span>' : '';

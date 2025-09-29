@@ -115,12 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBlocks();
     }
 
+    function esc(text){
+        const t = (text == null) ? '' : String(text);
+        return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     function renderUsers() {
         const term = searchInput.value.toLowerCase();
         const filtered = allUsers.filter(u => (u.title || u.email).toLowerCase().includes(term));
         userListDiv.innerHTML = `<ul>${filtered.map((u, index) => `
                 <li style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-                <span>${u.title || u.email}</span>
+                <span>${esc(u.title || u.email)}</span>
                     <div>
                         <button class="admin-edit-btn" data-type="user" data-index="${index}">Edit</button>
                     <button class="admin-delete-btn" data-type="user" data-email="${u.email}">Delete</button>
@@ -131,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPosts() {
         postsListDiv.innerHTML = `<ul>${allPosts.map(p => `
                 <li style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-                <span>${p.title} (by ${p.authorDisplayName})</span>
+                <span>${esc(p.title)} (by ${esc(p.authorDisplayName)})</span>
                 <button class="admin-delete-btn" data-type="post" data-id="${p.id}" data-image-path="${p.imagePath || ''}">Delete</button>
             </li>`).join('') || '<li>No posts found.</li>'}</ul>`;
     }
@@ -151,18 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sentNotificationsList.innerHTML = filtered.map(n => {
             const sentDate = n.sentAt ? new Date(n.sentAt.seconds * 1000).toLocaleString() : 'N/A';
-            const categoryHTML = n.category ? `<span class="notification-category-tag">${n.category}</span>` : '';
+            const categoryHTML = n.category ? `<span class="notification-category-tag">${esc(n.category)}</span>` : '';
             const imageHTML = n.imageUrl ? `<img src="${n.imageUrl}" style="max-width: 100px; max-height: 100px; object-fit: cover; margin-top: 10px; border-radius: 4px;">` : '';
-            const linkHTML = n.link ? `<a href="${n.link}" target="_blank" class="notification-link">View More</a>` : '';
+            const linkHTML = n.link ? `<a href="${n.link}" target="_blank" rel="noopener noreferrer" class="notification-link">View More</a>` : '';
 
             return `<div class="notification-item">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <h4>${n.title || 'No Title'}</h4>
+                    <h4>${esc(n.title || 'No Title')}</h4>
                     ${categoryHTML}
                 </div>
-                <p>${n.body || 'No Message'}</p>
+                <p>${esc(n.body || 'No Message')}</p>
                 ${imageHTML}
-                <small>To: ${Array.isArray(n.target) ? n.target.join(', ') : n.target}</small><br>
+                <small>To: ${Array.isArray(n.target) ? n.target.map(esc).join(', ') : esc(n.target)}</small><br>
                 <small>Sent: ${sentDate}</small>
                 <div class="notification-actions">
                     ${linkHTML}
@@ -216,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         listDiv.innerHTML = `<ul>${sorted.map(b => `
              <li style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;">
-               <span>${b.title || '(no title)'} <small>(${b.owner})</small></span>
+               <span>${esc(b.title || '(no title)')} <small>(${esc(b.owner)})</small></span>
                <div>
                  <button class="admin-edit-btn" data-type="gblock" data-id="${b.id}">Edit</button>
                  <button class="admin-delete-btn" data-type="gblock" data-id="${b.id}">Delete</button>
@@ -226,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function populateUserSelect() {
         notificationUserSelect.innerHTML = '<option value="all">All Users</option>' + 
-            allUsers.map(u => `<option value="${u.email}">${u.title || u.email}</option>`).join('');
+            allUsers.map(u => `<option value="${u.email}">${esc(u.title || u.email)}</option>`).join('');
     }
 
     function resetNotificationForm() {
@@ -862,6 +867,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let lastPreviewUrl = null;
+    function escapeHtml(text) {
+        const t = (text == null) ? '' : String(text);
+        return t
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function nl2brEscaped(text) {
+        return escapeHtml(text).replace(/\r\n|\r|\n/g, '<br>');
+    }
+
     function renderBlockLivePreview() {
         const blockLivePreview = document.getElementById('admin-block-live-preview');
         const blockTitleInput = document.getElementById('admin-block-title');
@@ -875,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (currentEmbed.provider === 'spotify') {
                 iframeHtml = `<iframe style="border-radius:12px" src="${currentEmbed.embedUrl}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
             }
-            blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='flex-direction:column;align-items:stretch;max-width:350px;'>${iframeHtml}<div style='padding:8px 0 0 0;'><strong>${blockTitleInput.value}</strong><br><small>${blockDescInput.value}</small></div></div>`;
+            blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='flex-direction:column;align-items:stretch;max-width:350px;'>${iframeHtml}<div style='padding:8px 0 0 0;'><strong>${escapeHtml(blockTitleInput.value)}</strong><br><small>${nl2brEscaped(blockDescInput.value)}</small></div></div>`;
         } else if (currentBlockType === 'default' || currentBlockType === 'large-image') {
             let imgSrc = '';
             if (blockImgInput.files[0]) {
@@ -891,9 +910,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (currentBlockType === 'default') {
-                blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='max-width:350px;'><div class='block-content'><img src='${imgSrc}' style='height:40px;width:40px;object-fit:cover;border-radius:4px;'><div class='block-text'><strong>${blockTitleInput.value}</strong><small>${blockDescInput.value}</small></div></div></div>`;
+                blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='max-width:350px;'><div class='block-content'><img src='${imgSrc}' style='height:40px;width:40px;object-fit:cover;border-radius:4px;'><div class='block-text'><strong>${escapeHtml(blockTitleInput.value)}</strong><small>${nl2brEscaped(blockDescInput.value)}</small></div></div></div>`;
             } else {
-                blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='flex-direction:column;align-items:flex-start;max-width:350px;'><img src='${imgSrc}' style='width:100%;height:230px;object-fit:cover;border-radius:8px 8px 0 0;'><div style='padding:8px 0 0 0;'><strong>${blockTitleInput.value}</strong><br><small>${blockDescInput.value}</small></div></div>`;
+                blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div class='block' style='flex-direction:column;align-items:flex-start;max-width:350px;'><img src='${imgSrc}' style='width:100%;height:230px;object-fit:cover;border-radius:8px 8px 0 0;'><div style='padding:8px 0 0 0;'><strong>${escapeHtml(blockTitleInput.value)}</strong><br><small>${nl2brEscaped(blockDescInput.value)}</small></div></div>`;
             }
         } else if (currentBlockType === 'carousel') {
             let slidesHTML = '';
@@ -909,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     imgSrc = DEFAULT_ICON;
                 }
-                slidesHTML += `<div style='display:inline-block;width:230px;height:320px;margin-right:8px;vertical-align:top;'><div style='background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;overflow:hidden;'><a href="${slide.link || '#'}" target="_blank" style="text-decoration:none; color:inherit;"><img src='${imgSrc}' style='width:230px;height:230px;object-fit:cover;display:block;'><div style='padding:8px;'><strong>${slide.title || ''}</strong><br><small>${slide.desc || ''}</small></div></a></div></div>`;
+                slidesHTML += `<div style='display:inline-block;width:230px;height:320px;margin-right:8px;vertical-align:top;'><div style='background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;overflow:hidden;'><a href="${slide.link || '#'}" target="_blank" style="text-decoration:none; color:inherit;"><img src='${imgSrc}' style='width:230px;height:230px;object-fit:cover;display:block;'><div style='padding:8px;'><strong>${escapeHtml(slide.title || '')}</strong><br><small>${nl2brEscaped(slide.desc || '')}</small></div></a></div></div>`;
             }
             blockLivePreview.innerHTML = `<p class='preview-text'>Block Preview:</p><div style='overflow-x:auto;white-space:nowrap;max-width:100%;'>${slidesHTML}</div>`;
         }

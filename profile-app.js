@@ -1,22 +1,123 @@
 // app.js
 import Cropper from "https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.esm.js";
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 // --- Onboarding Modal Controller ---
 const OB_SEEN_KEY = 'kr_profile_onboard_step_v1';
 const onboardOverlay = document.getElementById('onboard-overlay');
 const onboardBody = document.getElementById('onboard-body');
-const onboardTitle = document.getElementById('onboard-title');
+const onboardTitle = document.getElementById('onboard-title') || document.querySelector('.onboard-title');
 const onboardBack = document.getElementById('onboard-back');
 const onboardNext = document.getElementById('onboard-next');
 const onboardSkip = document.getElementById('onboard-skip');
 const onboardDots = document.querySelectorAll('.onboard-dot');
 
 let onboardStep = 0; // 0..3
+let hasShownAvatarNudge = false; // first-press gate for step 0 when no avatar
 
-function normalizeForValidation(value, platform){
+function hasCustomAvatar() {
+  try {
+    const doc = window.firebaseUtils?.currentUserDoc || {};
+    if (doc && typeof doc.avatar === 'string' && doc.avatar.trim()) return true;
+  } catch (_) { }
+  // Fallback to checking current preview sources during onboarding step 0
+  try {
+    const obAvatar = document.getElementById('ob-avatar');
+    const preview = document.getElementById('avatar-preview');
+    const isDefault = (src) => !src || src.includes('static/img/default-avatar.png');
+    const anySet = (obAvatar && !isDefault(obAvatar.src)) || (preview && !isDefault(preview.src));
+    return !!anySet;
+  } catch (_) { }
+  return false;
+}
+
+function ensureNudgeOverlay() {
+  let overlay = document.getElementById('avatar-nudge-overlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'avatar-nudge-overlay';
+  overlay.className = 'onboard-nudge-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `
+    <div class="onboard-nudge-content" tabindex="-1">
+      <button class="onboard-nudge-close" aria-label="Close">&times;</button>
+      <div class="onboard-nudge-title">Add a profile picture?</div>
+      <div class="onboard-nudge-text">A photo helps you stand out. Are you sure you don't want to add one now?</div>
+      <div class="onboard-nudge-actions">
+        <button type="button" class="secondary" id="nudge-dismiss">Close</button>
+        <button type="button" id="nudge-change-photo">Change Photo</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // Close interactions (outside click)
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) hideAvatarNudge(); });
+  // Close button
+  const closeBtn = overlay.querySelector('.onboard-nudge-close');
+  if (closeBtn) closeBtn.addEventListener('click', hideAvatarNudge);
+  // Footer buttons
+  const dismissBtn = overlay.querySelector('#nudge-dismiss');
+  const changeBtn = overlay.querySelector('#nudge-change-photo');
+  if (dismissBtn) dismissBtn.addEventListener('click', hideAvatarNudge);
+  if (changeBtn) changeBtn.addEventListener('click', () => {
+    try { hideAvatarNudge(); } catch (_) { }
+    try {
+      // Trigger existing avatar file input
+      if (avatarInput) {
+        try { avatarInput.value = ''; } catch (_) { }
+        avatarInput.click();
+      }
+    } catch (_) { }
+  });
+  return overlay;
+}
+
+let lastFocusedBeforeNudge = null;
+function showAvatarNudge() {
+  const overlay = ensureNudgeOverlay();
+  if (!overlay) return;
+  lastFocusedBeforeNudge = document.activeElement;
+  overlay.classList.add('visible');
+  try {
+    const content = overlay.querySelector('.onboard-nudge-content');
+    content?.focus();
+  } catch (_) { }
+}
+
+function hideAvatarNudge() {
+  const overlay = document.getElementById('avatar-nudge-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('visible');
+  try { if (lastFocusedBeforeNudge) lastFocusedBeforeNudge.focus(); } catch (_) { }
+}
+
+function shakeAndLabelContinueAnyways() {
+  if (!onboardNext) return;
+  // Update label
+  onboardNext.textContent = 'Continue Anyways';
+  // Shake animation
+  onboardNext.classList.remove('shake-once');
+  // Force reflow to restart animation
+  void onboardNext.offsetWidth;
+  onboardNext.classList.add('shake-once');
+  const remove = () => onboardNext.classList.remove('shake-once');
+  onboardNext.addEventListener('animationend', remove, { once: true });
+}
+
+function resetContinueButtonState() {
+  if (!onboardNext) return;
+  if (onboardStep === 0) {
+    onboardNext.textContent = 'Continue';
+    onboardNext.classList.remove('shake-once');
+    hasShownAvatarNudge = false;
+  }
+}
+
+function normalizeForValidation(value, platform) {
   try {
     // reuse existing normalizer if available below (hoisted), else basic
     if (typeof normalizeSocialUrl === 'function') return normalizeSocialUrl(value, platform);
-  } catch(_) {}
+  } catch (_) { }
   return value || '';
 }
 
@@ -28,23 +129,23 @@ function hasAnyValidSocial() {
     ['instagram', ig],
     ['youtube', yt],
     ['tiktok', tk]
-  ].map(([p,v]) => normalizeForValidation(v, p)).filter(Boolean);
+  ].map(([p, v]) => normalizeForValidation(v, p)).filter(Boolean);
   for (const v of candidates) {
     const val = v.trim();
     if (!val) continue;
-    try { new URL(val.startsWith('http') ? val : `https://${val}`); return true; } catch(_) {}
+    try { new URL(val.startsWith('http') ? val : `https://${val}`); return true; } catch (_) { }
   }
   return false;
 }
 
-function setOnboardDots(step){
-  onboardDots.forEach((d,i)=>d.classList.toggle('active', i===step));
+function setOnboardDots(step) {
+  onboardDots.forEach((d, i) => d.classList.toggle('active', i === step));
 }
 
-function validateStep(data){
+function validateStep(data) {
   // Prefer live inputs on the current step; fall back to the latest doc snapshot
   const doc = window.firebaseUtils?.currentUserDoc || data || {};
-  switch(onboardStep){
+  switch (onboardStep) {
     case 0: {
       const v = (document.getElementById('ob-title')?.value || doc.title || '').trim();
       return v.length > 0;
@@ -52,60 +153,72 @@ function validateStep(data){
     case 1: {
       const v = (document.getElementById('ob-bio')?.value || doc.bio || '').trim();
       const len = v.length;
-      return len>=5 && len<=280;
+      return len >= 5 && len <= 280;
     }
     case 2: {
       // Use the module-scoped selectedPractices state if available
-      if (Array.isArray(selectedPractices) && selectedPractices.length>0) return true;
-      return Array.isArray(doc.practices) && doc.practices.length>0;
+      if (Array.isArray(selectedPractices) && selectedPractices.length > 0) return true;
+      return Array.isArray(doc.practices) && doc.practices.length > 0;
     }
     case 3: return true; // socials optional
     default: return false;
   }
 }
 
-function renderStep(){
+function renderStep() {
   setOnboardDots(onboardStep);
-  onboardBack.style.visibility = onboardStep>0 ? 'visible' : 'hidden';
-  onboardSkip.style.display = onboardStep===3 ? 'inline-block' : 'none';
+  // Update header title per step (Option A)
+  if (onboardTitle) {
+    const TITLES = [
+      'Welcome to KR. Let\u2019s create your profile!',
+      'Set Your Bio',
+      'Select Your Creative Practices',
+      'Connect Your Socials'
+    ];
+    onboardTitle.textContent = TITLES[onboardStep] || '';
+  }
+  // Reset Next button label by default; step 4 may override
+  if (onboardNext) onboardNext.textContent = 'Continue';
+  onboardBack.style.visibility = onboardStep > 0 ? 'visible' : 'hidden';
+  onboardSkip.style.display = onboardStep === 3 ? 'inline-block' : 'none';
   const doc = window.firebaseUtils?.currentUserDoc || {};
-  if (onboardStep===0){
+  if (onboardStep === 0) {
     onboardBody.innerHTML = `
-      <img id="ob-avatar" class="onboard-avatar" src="${doc.avatar||'static/img/default-avatar.png'}" alt="Avatar">
+      <img id="ob-avatar" class="onboard-avatar" src="${doc.avatar || 'static/img/default-avatar.png'}" alt="Avatar">
       <div class="onboard-step-title">Your Info</div>
       <div class="center-align" style="margin-bottom:6px;">Enter your name and add a profile photo.</div>
       <button id="ob-avatar-btn" class="onboard-upload-btn" type="button">Change Photo</button>
       <div class="input-feild-title"><p class="input-feild-title-text">Display Name<span>*</span></p></div>
-      <input id="ob-title" class="input-feild onboard-input" type="text" placeholder="Profile Title" value="${doc.title||''}">
+      <input id="ob-title" class="input-feild onboard-input" type="text" placeholder="Profile Title" value="${doc.title || ''}">
       <div class="onboard-hint" id="ob-title-hint"></div>
     `;
     const titleInput = document.getElementById('ob-title');
-    titleInput.addEventListener('input', ()=> { debouncedAutoSave(); localStorage.setItem(OB_SEEN_KEY, String(onboardStep)); updateValidation(); });
+    titleInput.addEventListener('input', () => { debouncedAutoSave(); localStorage.setItem(OB_SEEN_KEY, String(onboardStep)); updateValidation(); });
     // Wire avatar change to existing input
     const obBtn = document.getElementById('ob-avatar-btn');
     if (obBtn && avatarInput) {
-      obBtn.onclick = ()=> {
+      obBtn.onclick = () => {
         // ensure change fires even if picking same file
-        try { avatarInput.value=''; } catch(_) {}
+        try { avatarInput.value = ''; } catch (_) { }
         avatarInput.click();
       };
     }
     const obAvatar = document.getElementById('ob-avatar');
     if (obAvatar && avatarPreview) {
-      const sync = ()=> { obAvatar.src = avatarPreview.src; };
+      const sync = () => { obAvatar.src = avatarPreview.src; };
       obAvatar.src = avatarPreview.src;
       avatarPreview.addEventListener('load', sync, { once: true });
     }
     // Keep underlying field in sync
     const profileTitle = document.getElementById('profile-title');
-    if (profileTitle) titleInput.addEventListener('input', ()=> { profileTitle.value = titleInput.value; });
-  } else if (onboardStep===1){
-    const bioVal = (doc.bio||'');
+    if (profileTitle) titleInput.addEventListener('input', () => { profileTitle.value = titleInput.value; });
+  } else if (onboardStep === 1) {
+    const bioVal = (doc.bio || '');
     const count = bioVal.trim().length;
     const nameSource = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
     onboardBody.innerHTML = `
-      <img class="onboard-avatar" src="${doc.avatar||'static/img/default-avatar.png'}" alt="Avatar">
-      <div class="onboard-step-title">Bio</div>
+      <img class="onboard-avatar" src="${doc.avatar || 'static/img/default-avatar.png'}" alt="Avatar">
+      <div class="onboard-step-title">${nameSource || 'Your Bio'}</div>
       <div class="center-align" id="ob-bio-prompt"></div>
       <div class="input-feild-title"><p class="input-feild-title-text">Bio<span>*</span></p></div>
       <textarea id="ob-bio" class="input-feild onboard-input" rows="5" placeholder="Add your bio...">${bioVal}</textarea>
@@ -115,32 +228,43 @@ function renderStep(){
     const updatePrompt = () => {
       const nm = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
       promptEl.textContent = nm ? `So, ${nm}, your bio. What do you do?` : 'Enter your bio. What do you do?';
+      const stepTitleEl = document.querySelector('.onboard-step-title');
+      if (stepTitleEl) stepTitleEl.textContent = nm || 'Your Bio';
     };
     updatePrompt();
     const titleField = document.getElementById('profile-title');
     if (titleField) titleField.addEventListener('input', updatePrompt);
     const bioInput = document.getElementById('ob-bio');
     const bioCount = document.getElementById('ob-bio-count');
-    bioInput.addEventListener('input', ()=>{
+    bioInput.addEventListener('input', () => {
       const v = bioInput.value;
       bioCount.textContent = `${v.trim().length}/280`;
-      if (v.length>280) bioInput.value = v.slice(0,280);
+      if (v.length > 280) bioInput.value = v.slice(0, 280);
       debouncedAutoSave(); localStorage.setItem(OB_SEEN_KEY, String(onboardStep)); updateValidation();
     });
     const bioField = document.getElementById('bio');
-    if (bioField) bioInput.addEventListener('input', ()=> { bioField.value = bioInput.value; });
-  } else if (onboardStep===2){
+    if (bioField) bioInput.addEventListener('input', () => { bioField.value = bioInput.value; });
+  } else if (onboardStep === 2) {
+    const nameSource = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
     onboardBody.innerHTML = `
-      <img class="onboard-avatar" src="${doc.avatar||'static/img/default-avatar.png'}" alt="Avatar">
-      <div class="onboard-step-title">Creative Practices</div>
-      <div class="center-align">Select your creative practices</div>
+      <img class="onboard-avatar" src="${doc.avatar || 'static/img/default-avatar.png'}" alt="Avatar">
+      <div class="onboard-step-title">${nameSource || 'Your Practices'}</div>
+      <div class="center-align">What themes you workin’ with?</div>
       <div class="input-feild-title"><p class="input-feild-title-text">Creative Practices<span>*</span></p></div>
       <div id="ob-practices" class="onboard-practices"></div>
       <div class="onboard-hint" id="ob-practices-hint"></div>
     `;
+    const updateTitle = () => {
+      const nm = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
+      const stepTitleEl = document.querySelector('.onboard-step-title');
+      if (stepTitleEl) stepTitleEl.textContent = nm || 'Your Practices';
+    };
+    const titleField = document.getElementById('profile-title');
+    if (titleField) titleField.addEventListener('input', updateTitle);
+    updateTitle();
     const wrap = document.getElementById('ob-practices');
     // Use existing PRACTICES and module-scoped selection state
-    const current = Array.isArray(selectedPractices) ? selectedPractices : (Array.isArray(doc.practices)?doc.practices:[]);
+    const current = Array.isArray(selectedPractices) ? selectedPractices : (Array.isArray(doc.practices) ? doc.practices : []);
     PRACTICES.forEach(pr => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -148,7 +272,7 @@ function renderStep(){
       btn.textContent = pr;
       btn.onclick = () => {
         if (selectedPractices.includes(pr)) {
-          selectedPractices = selectedPractices.filter(p=>p!==pr);
+          selectedPractices = selectedPractices.filter(p => p !== pr);
         } else {
           selectedPractices = [...selectedPractices, pr];
         }
@@ -157,52 +281,104 @@ function renderStep(){
       };
       wrap.appendChild(btn);
     });
-  } else if (onboardStep===3){
+  } else if (onboardStep === 3) {
+    const nameSource = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
     onboardBody.innerHTML = `
-      <img class="onboard-avatar" src="${doc.avatar||'static/img/default-avatar.png'}" alt="Avatar">
-      <div class="onboard-step-title">Socials</div>
+      <img class="onboard-avatar" src="${doc.avatar || 'static/img/default-avatar.png'}" alt="Avatar">
+      <div class="onboard-step-title">${nameSource || 'Your Socials'}</div>
       <div class="center-align">Connect to your socials - so people can find out more about you</div>
       <div class="input-feild-title"><p class="input-feild-title-text">Socials</p></div>
-      <input id="ob-instagram" class="input-feild onboard-input" type="url" placeholder="Instagram URL" value="${doc.instagram||''}">
-      <input id="ob-youtube" class="input-feild onboard-input" type="url" placeholder="YouTube URL" value="${doc.youtube||''}">
-      <input id="ob-tiktok" class="input-feild onboard-input" type="url" placeholder="TikTok URL" value="${doc.tiktok||''}">
+      <div class="onboard-input-wrap">
+        <img class="onboard-left-icon" src="static/img/instagram.svg" alt="" aria-hidden="true">
+        <input id="ob-instagram" class="input-feild onboard-input" type="url" placeholder="Instagram URL or @Handle" value="${doc.instagram || ''}">
+        <button type="button" class="onboard-open-btn" id="ob-instagram-open" aria-label="Open Instagram" title="Open Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+      </div>
+      <div class="onboard-input-wrap">
+        <img class="onboard-left-icon" src="static/img/youtube.svg" alt="" aria-hidden="true">
+        <input id="ob-youtube" class="input-feild onboard-input" type="url" placeholder="YouTube URL or @Handle" value="${doc.youtube || ''}">
+        <button type="button" class="onboard-open-btn" id="ob-youtube-open" aria-label="Open YouTube" title="Open YouTube">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+      </div>
+      <div class="onboard-input-wrap">
+        <img class="onboard-left-icon" src="static/img/tiktok.svg" alt="" aria-hidden="true">
+        <input id="ob-tiktok" class="input-feild onboard-input" type="url" placeholder="TikTok URL or @Handle" value="${doc.tiktok || ''}">
+        <button type="button" class="onboard-open-btn" id="ob-tiktok-open" aria-label="Open TikTok" title="Open TikTok">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+      </div>
       <div class="onboard-hint">I recommend adding these now, but skipping won’t affect your setup.</div>
     `;
+    const updateTitle = () => {
+      const nm = (document.getElementById('ob-title')?.value || document.getElementById('profile-title')?.value || doc.title || '').trim();
+      const stepTitleEl = document.querySelector('.onboard-step-title');
+      if (stepTitleEl) stepTitleEl.textContent = nm || 'Your Socials';
+    };
+    const titleField = document.getElementById('profile-title');
+    if (titleField) titleField.addEventListener('input', updateTitle);
+    updateTitle();
     const ig = document.getElementById('ob-instagram');
     const yt = document.getElementById('ob-youtube');
     const tk = document.getElementById('ob-tiktok');
+    const igOpen = document.getElementById('ob-instagram-open');
+    const ytOpen = document.getElementById('ob-youtube-open');
+    const tkOpen = document.getElementById('ob-tiktok-open');
     const igField = document.getElementById('instagram');
     const ytField = document.getElementById('youtube');
     const tkField = document.getElementById('tiktok');
     [
       [ig, igField], [yt, ytField], [tk, tkField]
-    ].forEach(([a,b])=>{ if (a && b) a.addEventListener('input', ()=> { b.value = a.value; debouncedAutoSave(); updateValidation(); }); });
+    ].forEach(([a, b]) => { if (a && b) a.addEventListener('input', () => { b.value = a.value; debouncedAutoSave(); updateValidation(); }); });
+    const HOMEPAGES = {
+      instagram: 'https://www.instagram.com/',
+      youtube: 'https://www.youtube.com/',
+      tiktok: 'https://www.tiktok.com/'
+    };
+    function computeSocialUrl(inputEl, platform) {
+      const raw = (inputEl?.value || '').trim();
+      if (raw) {
+        let url = normalizeSocialUrl(raw, platform);
+        if (url && !/^https?:\/\//.test(url)) url = `https://${url}`;
+        return url;
+      }
+      return HOMEPAGES[platform] || 'https://www.google.com';
+    }
+    [[ig, igOpen, 'instagram'], [yt, ytOpen, 'youtube'], [tk, tkOpen, 'tiktok']].forEach(([inp, btn, plat]) => {
+      if (!btn) return;
+      btn.disabled = false; // always enabled
+      btn.addEventListener('click', () => {
+        const url = computeSocialUrl(inp, plat);
+        window.open(url, '_blank', 'noopener');
+      });
+    });
     // Prepare footer buttons for Step 4
     if (onboardNext) onboardNext.textContent = 'Finish';
   }
   updateValidation();
 }
 
-function updateValidation(){
+function updateValidation() {
   const valid = validateStep();
   // Default behavior for steps 0-2: disable when invalid
   if (onboardStep !== 3) {
     onboardNext.disabled = !valid;
   }
   // hints
-  if (onboardStep===0){
-    const v = (document.getElementById('ob-title')?.value||'').trim();
+  if (onboardStep === 0) {
+    const v = (document.getElementById('ob-title')?.value || '').trim();
     document.getElementById('ob-title-hint').textContent = v ? '' : 'Add your display name to continue.';
-  } else if (onboardStep===1){
-    const len = (document.getElementById('ob-bio')?.value||'').trim().length;
+  } else if (onboardStep === 1) {
+    const len = (document.getElementById('ob-bio')?.value || '').trim().length;
     const hint = document.getElementById('ob-bio-hint');
-    hint.textContent = len<5 ? 'Say a little about what you do (min 5 chars).' : '';
-  } else if (onboardStep===2){
-  } else if (onboardStep===2){
-    const has = Array.isArray(selectedPractices) && selectedPractices.length>0;
+    hint.textContent = len < 5 ? 'Say a little about what you do (min 5 chars).' : '';
+  } else if (onboardStep === 2) {
+  } else if (onboardStep === 2) {
+    const has = Array.isArray(selectedPractices) && selectedPractices.length > 0;
     const hint = document.getElementById('ob-practices-hint');
     if (hint) hint.textContent = has ? '' : 'Pick at least one practice to get discovered.';
-  } else if (onboardStep===3){
+  } else if (onboardStep === 3) {
     // Toggle visibility: show Skip only by default; show Finish when any valid social is present
     const showFinish = hasAnyValidSocial();
     if (onboardNext) onboardNext.style.display = showFinish ? 'inline-block' : 'none';
@@ -210,35 +386,61 @@ function updateValidation(){
   }
 }
 
-function go(step){
+function go(step) {
   onboardStep = Math.max(0, Math.min(3, step));
   renderStep();
 }
 
-onboardBack?.addEventListener('click', ()=> go(onboardStep-1));
-onboardNext?.addEventListener('click', ()=> {
-  if (!validateStep()) return;
-  if (onboardStep<3) { go(onboardStep+1); localStorage.setItem(OB_SEEN_KEY, String(onboardStep)); }
-  else { onboardOverlay.classList.remove('visible'); document.body.style.overflow = ''; }
+onboardBack?.addEventListener('click', () => {
+  go(onboardStep - 1);
+  resetContinueButtonState();
 });
-onboardSkip?.addEventListener('click', ()=> { onboardOverlay.classList.remove('visible'); document.body.style.overflow=''; });
+onboardNext?.addEventListener('click', () => {
+  if (!validateStep()) return;
+  // Step 0 gate: if no custom avatar set, first press shows nudge and changes label
+  if (onboardStep === 0 && !hasCustomAvatar()) {
+    if (!hasShownAvatarNudge) {
+      showAvatarNudge();
+      shakeAndLabelContinueAnyways();
+      hasShownAvatarNudge = true;
+      return; // do not advance yet
+    }
+  }
+  if (onboardStep < 3) { go(onboardStep + 1); localStorage.setItem(OB_SEEN_KEY, String(onboardStep)); resetContinueButtonState(); }
+  else {
+    onboardOverlay.classList.remove('visible');
+    document.body.style.overflow = '';
+    // After finishing details onboarding, consider launching connections onboarding immediately
+    maybeStartConnectionsOnboarding();
+  }
+});
+// Close nudge on Esc (does not advance)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('avatar-nudge-overlay');
+    if (overlay && overlay.classList.contains('visible')) {
+      hideAvatarNudge();
+    }
+  }
+});
+onboardSkip?.addEventListener('click', () => { onboardOverlay.classList.remove('visible'); document.body.style.overflow = ''; });
 
-function shouldShowOnboarding(data){
+function shouldShowOnboarding(data) {
   const d = data || window.firebaseUtils?.currentUserDoc || {};
   const missingTitle = !(d.title && String(d.title).trim());
-  const missingBio = !((d.bio||'').trim().length>=5);
-  const missingPractices = !(Array.isArray(d.practices) && d.practices.length>0);
+  const missingBio = !((d.bio || '').trim().length >= 5);
+  const missingPractices = !(Array.isArray(d.practices) && d.practices.length > 0);
   return missingTitle || missingBio || missingPractices;
 }
 
-function inferFirstIncompleteStep(d){
+function inferFirstIncompleteStep(d) {
   if (!(d.title && String(d.title).trim())) return 0;
-  if (!((d.bio||'').trim().length>=5)) return 1;
-  if (!(Array.isArray(d.practices)&&d.practices.length>0)) return 2;
+  if (!((d.bio || '').trim().length >= 5)) return 1;
+  if (!(Array.isArray(d.practices) && d.practices.length > 0)) return 2;
   return 3;
 }
 
-window.addEventListener('kr_profile_doc_updated', (e)=>{
+window.addEventListener('kr_profile_doc_updated', (e) => {
   const data = e.detail || {};
   const isOpen = onboardOverlay.classList.contains('visible');
   if (isOpen) {
@@ -248,11 +450,55 @@ window.addEventListener('kr_profile_doc_updated', (e)=>{
   }
   if (shouldShowOnboarding(data)) {
     onboardOverlay.classList.add('visible');
-    document.body.style.overflow='hidden';
+    document.body.style.overflow = 'hidden';
     const startStep = inferFirstIncompleteStep(data);
     go(startStep);
   }
+  // After first onboarding completes, consider launching connections onboarding
+  try {
+    const hasConns = Array.isArray(data.connections) && data.connections.length > 0;
+    const email = window.firebaseUtils?.currentUser?.email || '';
+    const perUserKey = email ? `kr_connections_onboard_seen_v1:${email}` : null;
+    const seen = perUserKey ? (localStorage.getItem(perUserKey) === '1') : false;
+    const obVisible = document.getElementById('conn-onboard-overlay')?.classList.contains('visible');
+    if (!hasConns && !seen && !obVisible && !onboardOverlay.classList.contains('visible')) {
+      // Show connections onboarding
+      startConnectionsOnboarding();
+    }
+  } catch (_) { }
 });
+
+// If avatar becomes set during step 0, reset the Continue button state and close nudge if visible
+window.addEventListener('kr_profile_doc_updated', () => {
+  if (onboardStep === 0 && hasCustomAvatar()) {
+    resetContinueButtonState();
+    hideAvatarNudge();
+  }
+});
+
+// Helper to open connections onboarding if appropriate
+function maybeStartConnectionsOnboarding() {
+  try {
+    const data = window.firebaseUtils?.currentUserDoc || {};
+    const hasConns = Array.isArray(data.connections) && data.connections.length > 0;
+    const email = window.firebaseUtils?.currentUser?.email || '';
+    const perUserKey = email ? `kr_connections_onboard_seen_v1:${email}` : null;
+    const seen = perUserKey ? (localStorage.getItem(perUserKey) === '1') : false;
+    const obVisible = document.getElementById('conn-onboard-overlay')?.classList.contains('visible');
+    if (!hasConns && !seen && !obVisible) {
+      setTimeout(() => { try { if (window.startConnectionsOnboarding) window.startConnectionsOnboarding(); } catch (_) { } }, 30);
+    }
+  } catch (_) { }
+}
+
+// Ensure skip also opens connections onboarding when appropriate
+if (onboardSkip) {
+  onboardSkip.addEventListener('click', () => {
+    onboardOverlay.classList.remove('visible');
+    document.body.style.overflow = '';
+    maybeStartConnectionsOnboarding();
+  });
+}
 
 // --- HELP MODAL LOGIC ---
 const helpIcons = document.querySelectorAll('.help-icon');
@@ -309,13 +555,26 @@ document.addEventListener('keydown', (e) => {
 // Loading screen management
 const loadingScreen = document.getElementById('loading-screen');
 let loadingTasks = 0;
+const loadingHelpBtn = document.getElementById('loading-help');
+let loadingHelpTimer = null;
 
-window.startLoading = function() {
+window.startLoading = function () {
   loadingTasks++;
   loadingScreen.classList.remove('hidden');
+  // Hide helper immediately and (re)start delayed reveal timer
+  if (loadingHelpBtn) loadingHelpBtn.style.display = 'none';
+  if (loadingHelpTimer) {
+    clearTimeout(loadingHelpTimer);
+    loadingHelpTimer = null;
+  }
+  loadingHelpTimer = setTimeout(() => {
+    if (loadingTasks > 0 && loadingScreen && !loadingScreen.classList.contains('hidden')) {
+      if (loadingHelpBtn) loadingHelpBtn.style.display = 'inline-block';
+    }
+  }, 5000);
 };
 
-window.stopLoading = function() {
+window.stopLoading = function () {
   loadingTasks--;
   if (loadingTasks <= 0) {
     loadingTasks = 0;
@@ -323,7 +582,24 @@ window.stopLoading = function() {
       loadingScreen.classList.add('hidden');
     }, 500); // Match the CSS transition duration
   }
+  // Always clear and hide helper when stopping a loading task
+  if (loadingHelpTimer) {
+    clearTimeout(loadingHelpTimer);
+    loadingHelpTimer = null;
+  }
+  if (loadingHelpBtn) loadingHelpBtn.style.display = 'none';
 };
+
+// Click helper to reload the page
+if (loadingHelpBtn) {
+  loadingHelpBtn.addEventListener('click', () => {
+    try {
+      // Provide immediate feedback by hiding loader before reload
+      loadingScreen?.classList.add('hidden');
+    } catch (_) { }
+    window.location.reload();
+  });
+}
 
 // Lazy loading for blocks
 let blocksLoaded = false;
@@ -341,13 +617,13 @@ blocksObserver.observe(blocksSection);
 async function loadBlocks() {
   if (blocksLoaded) return;
   blocksLoaded = true;
-  
+
   try {
     const email = window.firebaseUtils.currentUser.email;
     const docRef = await window.firebaseUtils.getUserDocRef(email);
     const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       const data = docSnap.data();
       if (Array.isArray(data.blocks)) {
@@ -384,7 +660,7 @@ avatarInput.addEventListener("change", (e) => {
       modal.style.alignItems = "center";
       // Ensure this sits above the onboarding overlay (z-index 10010)
       modal.style.zIndex = "10050";
-      
+
       modal.innerHTML = `<div style="background: white; padding: 1rem; border-radius: 8px; max-width: 90%; max-height: 90vh; overflow: auto;">
         <div style="max-height: 70vh; margin-bottom: 1rem;"><img id="crop-image" style="max-width: 100%; display: block;" /></div>
         <div style="text-align: center;">
@@ -409,30 +685,30 @@ avatarInput.addEventListener("change", (e) => {
         cropConfirmBtn.disabled = true;
         cropCancelBtn.disabled = true;
         cropConfirmBtn.textContent = 'Uploading avatar...';
-        
+
         window.startLoading();
         try {
           const blob = await new Promise(resolve => cropper.getCroppedCanvas().toBlob(resolve, 'image/jpeg'));
-          
+
           avatarFile = new File([blob], "avatar.jpg", { type: "image/jpeg" });
           const compressedBlob = await compressImage(avatarFile, 0.7, 800, 800);
           const compressedFile = new File([compressedBlob], "avatar.jpg", { type: "image/jpeg" });
-          
+
           // Upload the new avatar immediately
           const email = window.firebaseUtils.currentUser.email;
           const avatarUrl = await window.firebaseUtils.uploadImage(compressedFile, `avatars/${email}`);
-          
+
           // Update the preview
           avatarPreview.src = avatarUrl;
           // If onboarding open, sync its avatar image
           try {
             const ob = document.getElementById('ob-avatar');
             if (ob) ob.src = avatarUrl;
-          } catch (_) {}
-          
+          } catch (_) { }
+
           // Save to Firestore
           await window.firebaseUtils.saveUserData(email, { avatar: avatarUrl });
-          
+
           cropper.destroy();
           modal.remove();
         } catch (error) {
@@ -454,7 +730,7 @@ avatarInput.addEventListener("change", (e) => {
     };
   }
   // Allow re-selecting the same file by clearing the input value
-  try { e.target.value = ''; } catch (_) {}
+  try { e.target.value = ''; } catch (_) { }
 });
 
 // Allow clicking the avatar image to trigger the file input
@@ -512,82 +788,82 @@ function showNotification(message, isError = false) {
 
 // Debounce function to limit how often a function is called
 function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), delay);
-    };
+  let timeout;
+  return function (...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), delay);
+  };
 }
 
 // Helper function to normalize social media handles into full URLs
 function normalizeSocialUrl(value, platform) {
-    if (!value || value.trim() === '') return '';
-    
-    value = value.trim();
+  if (!value || value.trim() === '') return '';
 
-    // If it's already a full URL, keep it.
-    if (value.startsWith('http') || value.startsWith('www.')) {
-        return value;
-    }
+  value = value.trim();
 
-    // It's a handle, format it.
-    const handle = value.startsWith('@') ? value.substring(1) : value;
+  // If it's already a full URL, keep it.
+  if (value.startsWith('http') || value.startsWith('www.')) {
+    return value;
+  }
 
-    switch(platform) {
-        case 'instagram':
-            return `https://www.instagram.com/${handle}`;
-        case 'tiktok':
-            return `https://www.tiktok.com/@${handle}`;
-        case 'youtube':
-             // Assume new @-handles for YouTube
-             return `https://www.youtube.com/@${handle}`;
-        default:
-            return value;
-    }
+  // It's a handle, format it.
+  const handle = value.startsWith('@') ? value.substring(1) : value;
+
+  switch (platform) {
+    case 'instagram':
+      return `https://www.instagram.com/${handle}`;
+    case 'tiktok':
+      return `https://www.tiktok.com/@${handle}`;
+    case 'youtube':
+      // Assume new @-handles for YouTube
+      return `https://www.youtube.com/@${handle}`;
+    default:
+      return value;
+  }
 }
 
 // Function to save profile data
 async function autoSaveProfile() {
-    if (!window.firebaseUtils.currentUser || !saveStatusEl) return;
-    
-    // 1. Show "Saving..." status
-    saveStatusEl.textContent = 'Saving...';
-    saveStatusEl.classList.remove('saved');
-    saveStatusEl.classList.add('visible');
-    
-    try {
-        const email = window.firebaseUtils.currentUser.email;
-        
-        // Gather data from all inputs
-        const profileData = {
-            title: document.getElementById("profile-title").value,
-            bio: document.getElementById("bio").value,
-            instagram: normalizeSocialUrl(document.getElementById("instagram").value, 'instagram'),
-            youtube: normalizeSocialUrl(document.getElementById("youtube").value, 'youtube'),
-            tiktok: normalizeSocialUrl(document.getElementById("tiktok").value, 'tiktok'),
-            practices: selectedPractices // This is updated by the practice pills
-        };
-        
-        // Note: Avatar is saved separately in its own flow to handle cropping
-        
-        await window.firebaseUtils.saveUserData(email, profileData);
-        
-        // 2. Show "Saved" status on success
-        saveStatusEl.textContent = '✓ Saved';
-        saveStatusEl.classList.add('saved');
-        
-    } catch (e) {
-        console.error('Auto-save failed:', e);
-        // Show error status
-        saveStatusEl.textContent = 'Error saving';
-        saveStatusEl.classList.add('error'); // You can add an error class for styling if you want
-    } finally {
-        // 3. Hide status indicator after a delay
-        setTimeout(() => {
-            saveStatusEl.classList.remove('visible');
-        }, 2000); // Keep "Saved" message visible for 2 seconds
-    }
+  if (!window.firebaseUtils.currentUser || !saveStatusEl) return;
+
+  // 1. Show "Saving..." status
+  saveStatusEl.textContent = 'Saving...';
+  saveStatusEl.classList.remove('saved');
+  saveStatusEl.classList.add('visible');
+
+  try {
+    const email = window.firebaseUtils.currentUser.email;
+
+    // Gather data from all inputs
+    const profileData = {
+      title: document.getElementById("profile-title").value,
+      bio: document.getElementById("bio").value,
+      instagram: normalizeSocialUrl(document.getElementById("instagram").value, 'instagram'),
+      youtube: normalizeSocialUrl(document.getElementById("youtube").value, 'youtube'),
+      tiktok: normalizeSocialUrl(document.getElementById("tiktok").value, 'tiktok'),
+      practices: selectedPractices // This is updated by the practice pills
+    };
+
+    // Note: Avatar is saved separately in its own flow to handle cropping
+
+    await window.firebaseUtils.saveUserData(email, profileData);
+
+    // 2. Show "Saved" status on success
+    saveStatusEl.textContent = '✓ Saved';
+    saveStatusEl.classList.add('saved');
+
+  } catch (e) {
+    console.error('Auto-save failed:', e);
+    // Show error status
+    saveStatusEl.textContent = 'Error saving';
+    saveStatusEl.classList.add('error'); // You can add an error class for styling if you want
+  } finally {
+    // 3. Hide status indicator after a delay
+    setTimeout(() => {
+      saveStatusEl.classList.remove('visible');
+    }, 2000); // Keep "Saved" message visible for 2 seconds
+  }
 }
 
 // Create a debounced version of the save function
@@ -595,13 +871,13 @@ const debouncedAutoSave = debounce(autoSaveProfile, 2000);
 
 // Attach event listeners to all relevant inputs
 document.addEventListener('DOMContentLoaded', () => {
-    const inputsToTrack = document.querySelectorAll(
-        '#profile-title, #bio, #instagram, #youtube, #tiktok'
-    );
-    
-    inputsToTrack.forEach(input => {
-        input.addEventListener('input', debouncedAutoSave);
-    });
+  const inputsToTrack = document.querySelectorAll(
+    '#profile-title, #bio, #instagram, #youtube, #tiktok'
+  );
+
+  inputsToTrack.forEach(input => {
+    input.addEventListener('input', debouncedAutoSave);
+  });
 });
 
 // The event listener for practice pills will be added in `renderPracticePills`
@@ -685,59 +961,59 @@ function parseSpotifyEmbed(url) {
 }
 
 async function fetchLinkMetadataAndFillForm(url, titleInput, descInput, imgInput, imagePreviewDiv, loadingIndicatorContainer) {
-    if (!url || !isValidUrlForFlow(url)) { // Use existing validation
-        return;
-    }
+  if (!url || !isValidUrlForFlow(url)) { // Use existing validation
+    return;
+  }
 
-    loadingIndicatorContainer.innerHTML = `
+  loadingIndicatorContainer.innerHTML = `
       <div class="loading-indicator">
         <div class="spinner"></div>
         <span>Fetching preview...</span>
       </div>
     `;
-    imagePreviewDiv.innerHTML = ''; // Clear previous image preview
+  imagePreviewDiv.innerHTML = ''; // Clear previous image preview
 
-    try {
-        const encodedUrl = encodeURIComponent(normalizeUrl(url));
-        const response = await fetch(`https://api.microlink.io/?url=${encodedUrl}`);
-        
-        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-        const data = await response.json();
-        if (data.status !== 'success') throw new Error(`API returned status: ${data.status}`);
+  try {
+    const encodedUrl = encodeURIComponent(normalizeUrl(url));
+    const response = await fetch(`https://api.microlink.io/?url=${encodedUrl}`);
 
-        const metadata = data.data;
-        if (metadata.title) titleInput.value = metadata.title;
-        if (metadata.description) descInput.value = metadata.description;
-        
-        loadingIndicatorContainer.innerHTML = ''; // Clear "fetching" message
+    if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+    const data = await response.json();
+    if (data.status !== 'success') throw new Error(`API returned status: ${data.status}`);
 
-        if (metadata.image && metadata.image.url) {
-            const imageUrl = metadata.image.url;
-            imagePreviewDiv.innerHTML = `<img src="${imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 10px;">`;
+    const metadata = data.data;
+    if (metadata.title) titleInput.value = metadata.title;
+    if (metadata.description) descInput.value = metadata.description;
 
-             try {
-                const imageResponse = await fetch(imageUrl);
-                if (imageResponse.ok) {
-                    const blob = await imageResponse.blob();
-                    const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1).split('?')[0] || 'image.jpg';
-                    const file = new File([blob], filename, { type: blob.type });
+    loadingIndicatorContainer.innerHTML = ''; // Clear "fetching" message
 
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    imgInput.files = dataTransfer.files;
+    if (metadata.image && metadata.image.url) {
+      const imageUrl = metadata.image.url;
+      imagePreviewDiv.innerHTML = `<img src="${imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 10px;">`;
 
-                    // Manually trigger change event for live preview update
-                    imgInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            } catch (e) {
-                console.warn("Could not fetch image for pre-filling file input due to CORS or other network issue. Image preview is still shown.", e);
-                imagePreviewDiv.innerHTML += '<p style="font-size: 12px; color: #666;">Could not auto-load image file. Please save and upload manually if desired.</p>';
-            }
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (imageResponse.ok) {
+          const blob = await imageResponse.blob();
+          const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1).split('?')[0] || 'image.jpg';
+          const file = new File([blob], filename, { type: blob.type });
+
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          imgInput.files = dataTransfer.files;
+
+          // Manually trigger change event for live preview update
+          imgInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
-    } catch (error) {
-        console.error("Error fetching link metadata:", error);
-        loadingIndicatorContainer.innerHTML = '<p class="loading-indicator" style="color: red;">Could not fetch link data.</p>';
+      } catch (e) {
+        console.warn("Could not fetch image for pre-filling file input due to CORS or other network issue. Image preview is still shown.", e);
+        imagePreviewDiv.innerHTML += '<p style="font-size: 12px; color: #666;">Could not auto-load image file. Please save and upload manually if desired.</p>';
+      }
     }
+  } catch (error) {
+    console.error("Error fetching link metadata:", error);
+    loadingIndicatorContainer.innerHTML = '<p class="loading-indicator" style="color: red;">Could not fetch link data.</p>';
+  }
 }
 
 function renderBlockLivePreview() {
@@ -857,7 +1133,7 @@ function setBlockType(type) {
   document.querySelectorAll('.block-type-card').forEach(card => card.classList.remove('selected'));
   const selectedCard = document.querySelector(`.block-type-card[data-type="${type}"]`);
   if (selectedCard) selectedCard.classList.add('selected');
-  
+
   const blockUrlContainer = document.getElementById('block-url-container');
   blockUrlContainer.style.display = (type === 'carousel') ? 'none' : 'block';
 
@@ -970,78 +1246,78 @@ if (embedSpotifyBtn) {
 
 // Show block details only after a link is entered
 blockLinkInput.addEventListener('change', (e) => {
-    const url = e.target.value.trim();
-    const blockTypeSelect = document.getElementById("block-type-select");
-    const blockLivePreview = document.getElementById("block-live-preview");
-    const blockDetailsContainer = document.getElementById('block-details-container');
-    const shownAfterUrlInput = document.querySelector('.shown-after-url-input');
-    const urlInstruction = document.getElementById('url-instruction');
+  const url = e.target.value.trim();
+  const blockTypeSelect = document.getElementById("block-type-select");
+  const blockLivePreview = document.getElementById("block-live-preview");
+  const blockDetailsContainer = document.getElementById('block-details-container');
+  const shownAfterUrlInput = document.querySelector('.shown-after-url-input');
+  const urlInstruction = document.getElementById('url-instruction');
 
-    // Update embed button states
-    const y = parseYoutubeEmbed(url);
-    const s = parseSpotifyEmbed(url);
-    if (embedYoutubeBtn) {
-      embedYoutubeBtn.disabled = !y;
-      embedYoutubeBtn.style.display = y ? 'inline-block' : 'none';
-    }
-    if (embedSpotifyBtn) {
-      embedSpotifyBtn.disabled = !s;
-      embedSpotifyBtn.style.display = s ? 'inline-block' : 'none';
-    }
-    if (embedOptionsDiv) { embedOptionsDiv.style.display = (y || s) ? 'block' : 'none'; }
+  // Update embed button states
+  const y = parseYoutubeEmbed(url);
+  const s = parseSpotifyEmbed(url);
+  if (embedYoutubeBtn) {
+    embedYoutubeBtn.disabled = !y;
+    embedYoutubeBtn.style.display = y ? 'inline-block' : 'none';
+  }
+  if (embedSpotifyBtn) {
+    embedSpotifyBtn.disabled = !s;
+    embedSpotifyBtn.style.display = s ? 'inline-block' : 'none';
+  }
+  if (embedOptionsDiv) { embedOptionsDiv.style.display = (y || s) ? 'block' : 'none'; }
 
-    if (url && isValidUrlForFlow(url)) {
-        // Show the entire section after URL input
-        shownAfterUrlInput.classList.add('visible');
-        urlInstruction.textContent = 'Great! Now you can customize your block.';
-        urlInstruction.style.color = '#4CAF50';
-        
-        blockTypeSelect.style.display = 'flex';
-        blockLivePreview.style.display = 'block';
-        if (currentBlockType !== 'carousel') {
-             blockDetailsContainer.style.display = 'block';
-        }
-        
-        if (currentBlockType === 'default' || currentBlockType === 'large-image') {
-            const imagePreviewDiv = document.getElementById('image-preview');
-            const loadingIndicatorContainer = document.getElementById('url-loading-indicator');
-            fetchLinkMetadataAndFillForm(url, blockTitleInput, blockDescInput, blockImgInput, imagePreviewDiv, loadingIndicatorContainer)
-              .then(() => renderBlockLivePreview());
-        }
+  if (url && isValidUrlForFlow(url)) {
+    // Show the entire section after URL input
+    shownAfterUrlInput.classList.add('visible');
+    urlInstruction.textContent = 'Great! Now you can customize your block.';
+    urlInstruction.style.color = '#4CAF50';
+
+    blockTypeSelect.style.display = 'flex';
+    blockLivePreview.style.display = 'block';
+    if (currentBlockType !== 'carousel') {
+      blockDetailsContainer.style.display = 'block';
+    }
+
+    if (currentBlockType === 'default' || currentBlockType === 'large-image') {
+      const imagePreviewDiv = document.getElementById('image-preview');
+      const loadingIndicatorContainer = document.getElementById('url-loading-indicator');
+      fetchLinkMetadataAndFillForm(url, blockTitleInput, blockDescInput, blockImgInput, imagePreviewDiv, loadingIndicatorContainer)
+        .then(() => renderBlockLivePreview());
+    }
+  } else {
+    // Hide the entire section after URL input if URL is invalid or empty
+    shownAfterUrlInput.classList.remove('visible');
+    if (url) {
+      urlInstruction.textContent = 'Please enter a valid URL (starting with http://, https://, or www.)';
+      urlInstruction.style.color = '#f44336';
     } else {
-        // Hide the entire section after URL input if URL is invalid or empty
-        shownAfterUrlInput.classList.remove('visible');
-        if (url) {
-            urlInstruction.textContent = 'Please enter a valid URL (starting with http://, https://, or www.)';
-            urlInstruction.style.color = '#f44336';
-        } else {
-            urlInstruction.textContent = 'Enter a valid URL to continue with block creation';
-            urlInstruction.style.color = '#666';
-        }
-        blockTypeSelect.style.display = 'none';
-        blockLivePreview.style.display = 'none';
-        blockDetailsContainer.style.display = 'none';
+      urlInstruction.textContent = 'Enter a valid URL to continue with block creation';
+      urlInstruction.style.color = '#666';
     }
+    blockTypeSelect.style.display = 'none';
+    blockLivePreview.style.display = 'none';
+    blockDetailsContainer.style.display = 'none';
+  }
 });
 
 // Also handle input event for immediate feedback
 blockLinkInput.addEventListener('input', (e) => {
-    const url = e.target.value.trim();
-    const shownAfterUrlInput = document.querySelector('.shown-after-url-input');
-    const urlInstruction = document.getElementById('url-instruction');
+  const url = e.target.value.trim();
+  const shownAfterUrlInput = document.querySelector('.shown-after-url-input');
+  const urlInstruction = document.getElementById('url-instruction');
 
-    // Update embed button states live
-    const y = parseYoutubeEmbed(url);
-    const s = parseSpotifyEmbed(url);
-    if (embedYoutubeBtn) {
-      embedYoutubeBtn.disabled = !y;
-      embedYoutubeBtn.style.display = y ? 'inline-block' : 'none';
-    }
-    if (embedSpotifyBtn) {
-      embedSpotifyBtn.disabled = !s;
-      embedSpotifyBtn.style.display = s ? 'inline-block' : 'none';
-    }
-    if (embedOptionsDiv) { embedOptionsDiv.style.display = (y || s) ? 'block' : 'none'; }
+  // Update embed button states live
+  const y = parseYoutubeEmbed(url);
+  const s = parseSpotifyEmbed(url);
+  if (embedYoutubeBtn) {
+    embedYoutubeBtn.disabled = !y;
+    embedYoutubeBtn.style.display = y ? 'inline-block' : 'none';
+  }
+  if (embedSpotifyBtn) {
+    embedSpotifyBtn.disabled = !s;
+    embedSpotifyBtn.style.display = s ? 'inline-block' : 'none';
+  }
+  if (embedOptionsDiv) { embedOptionsDiv.style.display = (y || s) ? 'block' : 'none'; }
 
   // If currently in embed mode, update current embed URL for live preview
   if (currentBlockType === 'embed' && currentEmbed) {
@@ -1050,22 +1326,22 @@ blockLinkInput.addEventListener('input', (e) => {
     renderBlockLivePreview();
   }
 
-    if (url && isValidUrlForFlow(url)) {
-        // Show the entire section after URL input
-        shownAfterUrlInput.classList.add('visible');
-        urlInstruction.textContent = 'Great! Now you can customize your block.';
-        urlInstruction.style.color = '#4CAF50';
+  if (url && isValidUrlForFlow(url)) {
+    // Show the entire section after URL input
+    shownAfterUrlInput.classList.add('visible');
+    urlInstruction.textContent = 'Great! Now you can customize your block.';
+    urlInstruction.style.color = '#4CAF50';
+  } else {
+    // Hide the entire section after URL input if URL is invalid or empty
+    shownAfterUrlInput.classList.remove('visible');
+    if (url) {
+      urlInstruction.textContent = 'Please enter a valid URL (starting with http://, https://, or www.)';
+      urlInstruction.style.color = '#f44336';
     } else {
-        // Hide the entire section after URL input if URL is invalid or empty
-        shownAfterUrlInput.classList.remove('visible');
-        if (url) {
-            urlInstruction.textContent = 'Please enter a valid URL (starting with http://, https://, or www.)';
-            urlInstruction.style.color = '#f44336';
-        } else {
-            urlInstruction.textContent = 'Enter a valid URL to continue with block creation';
-            urlInstruction.style.color = '#666';
-        }
+      urlInstruction.textContent = 'Enter a valid URL to continue with block creation';
+      urlInstruction.style.color = '#666';
     }
+  }
 });
 
 function createCarouselSlideField(slide, idx) {
@@ -1101,10 +1377,10 @@ function createCarouselSlideField(slide, idx) {
     </div>
     <button type='button' class='remove-slide-btn'>${buttonText}</button>
   `;
-  
+
   const linkInput = div.querySelector('.carousel-slide-link');
   const detailsContainer = div.querySelector('.carousel-slide-details');
-  
+
   linkInput.addEventListener('input', e => {
     slide.link = e.target.value;
     if (linkInput.value.trim() !== '') {
@@ -1113,24 +1389,24 @@ function createCarouselSlideField(slide, idx) {
       detailsContainer.style.display = 'none';
     }
   });
-  
+
   linkInput.addEventListener('change', (e) => {
-      const url = e.target.value;
-      const titleInput = detailsContainer.querySelector('.carousel-slide-title');
-      const descInput = detailsContainer.querySelector('.carousel-slide-desc');
-      const imgInput = detailsContainer.querySelector('.carousel-slide-img');
-      const imagePreviewDiv = div.querySelector('.carousel-image-preview');
-      const loadingIndicatorContainer = div.querySelector('.carousel-url-loading-indicator');
-      fetchLinkMetadataAndFillForm(url, titleInput, descInput, imgInput, imagePreviewDiv, loadingIndicatorContainer)
-          .then(() => {
-              // Update the slide object with the new data
-              slide.title = titleInput.value;
-              slide.desc = descInput.value;
-              if(imgInput.files[0]) {
-                  slide.imgFile = imgInput.files[0];
-              }
-              renderBlockLivePreview();
-          });
+    const url = e.target.value;
+    const titleInput = detailsContainer.querySelector('.carousel-slide-title');
+    const descInput = detailsContainer.querySelector('.carousel-slide-desc');
+    const imgInput = detailsContainer.querySelector('.carousel-slide-img');
+    const imagePreviewDiv = div.querySelector('.carousel-image-preview');
+    const loadingIndicatorContainer = div.querySelector('.carousel-url-loading-indicator');
+    fetchLinkMetadataAndFillForm(url, titleInput, descInput, imgInput, imagePreviewDiv, loadingIndicatorContainer)
+      .then(() => {
+        // Update the slide object with the new data
+        slide.title = titleInput.value;
+        slide.desc = descInput.value;
+        if (imgInput.files[0]) {
+          slide.imgFile = imgInput.files[0];
+        }
+        renderBlockLivePreview();
+      });
   });
 
   const titleInput = detailsContainer.querySelector('.carousel-slide-title');
@@ -1141,9 +1417,9 @@ function createCarouselSlideField(slide, idx) {
   descInput.addEventListener('input', e => { slide.desc = e.target.value; renderBlockLivePreview(); });
   imgInput.addEventListener('change', e => { slide.imgFile = e.target.files[0]; renderBlockLivePreview(); });
   imgInput.dataset.icon = slide.icon || DEFAULT_ICON;
-  
+
   const actionButton = div.querySelector('.remove-slide-btn');
-  actionButton.addEventListener('click', function() {
+  actionButton.addEventListener('click', function () {
     if (isPermanentSlide) {
       // Clear functionality for the first two slides
       carouselSlides[idx] = { title: '', desc: '', link: '', imgFile: null, icon: '', isPermanent: true };
@@ -1269,13 +1545,13 @@ function resetBlockModal() {
     { title: '', desc: '', link: '', imgFile: null, icon: '', isPermanent: true }
   ];
   renderCarouselSlidesFields();
-  
+
   const blockTypeSelect = document.getElementById("block-type-select");
   const blockLivePreview = document.getElementById("block-live-preview");
   const blockDetailsContainer = document.getElementById('block-details-container');
   const shownAfterUrlInput = document.querySelector('.shown-after-url-input');
   const urlInstruction = document.getElementById('url-instruction');
-  
+
   shownAfterUrlInput.classList.remove('visible');
   urlInstruction.textContent = 'Enter a valid URL to continue with block creation';
   urlInstruction.style.color = '#666';
@@ -1310,9 +1586,9 @@ function openBlockModal(isEditing = false) {
     blockTypeSelect.style.display = 'flex';
     blockLivePreview.style.display = 'block';
     if (currentBlockType !== 'carousel') {
-        blockDetailsContainer.style.display = 'block';
+      blockDetailsContainer.style.display = 'block';
     } else {
-        blockDetailsContainer.style.display = 'none';
+      blockDetailsContainer.style.display = 'none';
     }
     if (embedOptionsDiv) embedOptionsDiv.style.display = 'block';
   }
@@ -1321,7 +1597,7 @@ function openBlockModal(isEditing = false) {
   setTimeout(() => document.getElementById('block-link').focus(), 100);
   // Always render the preview immediately
   renderBlockLivePreview();
-  
+
   // Trigger validation to ensure proper initial state only when ADDING a block
   if (!isEditing) {
     setTimeout(() => {
@@ -1594,14 +1870,14 @@ function renderBlocks(arr) {
 function handleDragStart(e) {
   e.dataTransfer.setData('text/plain', e.target.dataset.index);
   e.target.style.opacity = '0.4';
-  
+
   // Add dragging class to the block
   const block = e.target.closest('.block');
   block.style.transform = 'scale(1.02)';
   block.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
   block.style.zIndex = '1000';
   block.style.opacity = '0.8';
-  
+
   // Create ghost image
   const ghost = block.cloneNode(true);
   ghost.style.position = 'absolute';
@@ -1614,14 +1890,14 @@ function handleDragStart(e) {
 
 function handleDragEnd(e) {
   e.target.style.opacity = '1';
-  
+
   // Remove dragging class from the block
   const block = e.target.closest('.block');
   block.style.transform = '';
   block.style.boxShadow = '';
   block.style.zIndex = '';
   block.style.opacity = '';
-  
+
   // Remove any drop indicators and reset block positions
   document.querySelectorAll('.drop-indicator, .drop-wireframe').forEach(el => el.remove());
   document.querySelectorAll('.block').forEach(b => {
@@ -1633,22 +1909,22 @@ function handleDragEnd(e) {
 function handleDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  
+
   const block = e.target.closest('.block');
   if (!block) return;
-  
+
   const blocks = document.querySelectorAll('.block');
   const dragHandle = document.querySelector('.drag-handle[draggable="true"]');
   if (!dragHandle) return;
-  
+
   const dragIndex = parseInt(dragHandle.dataset.index);
   const dropIndex = parseInt(block.querySelector('.drag-handle').dataset.index);
-  
+
   if (dragIndex === dropIndex) return;
-  
+
   // Remove existing drop indicators
   document.querySelectorAll('.drop-indicator, .drop-wireframe').forEach(el => el.remove());
-  
+
   // Create drop indicator
   const indicator = document.createElement('div');
   indicator.className = 'drop-indicator';
@@ -1659,7 +1935,7 @@ function handleDragOver(e) {
   indicator.style.background = '#0000ff';
   indicator.style.pointerEvents = 'none';
   indicator.style.zIndex = '1000';
-  
+
   // Create wireframe box
   const wireframe = document.createElement('div');
   wireframe.className = 'drop-wireframe';
@@ -1671,18 +1947,18 @@ function handleDragOver(e) {
   wireframe.style.pointerEvents = 'none';
   wireframe.style.zIndex = '999';
   wireframe.style.transition = 'all 0.2s ease';
-  
+
   // Calculate positions and move blocks
   const blockHeight = block.offsetHeight;
   const blockTop = block.getBoundingClientRect().top;
   const blocksContainer = document.getElementById('blocks-container');
   const containerTop = blocksContainer.getBoundingClientRect().top;
-  
+
   if (dragIndex < dropIndex) {
     indicator.style.bottom = '0';
     wireframe.style.top = '100%';
     wireframe.style.height = blockHeight + 'px';
-    
+
     // Move blocks below the drop position
     blocks.forEach((b, idx) => {
       if (idx > dropIndex) {
@@ -1694,7 +1970,7 @@ function handleDragOver(e) {
     indicator.style.top = '0';
     wireframe.style.bottom = '100%';
     wireframe.style.height = blockHeight + 'px';
-    
+
     // Move blocks above the drop position
     blocks.forEach((b, idx) => {
       if (idx < dropIndex) {
@@ -1703,7 +1979,7 @@ function handleDragOver(e) {
       }
     });
   }
-  
+
   block.style.position = 'relative';
   block.appendChild(indicator);
   block.appendChild(wireframe);
@@ -1713,7 +1989,7 @@ async function handleDrop(e) {
   e.preventDefault();
   const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
   const toIndex = parseInt(e.target.closest('.block')?.querySelector('.drag-handle')?.dataset.index);
-  
+
   if (fromIndex !== toIndex) {
     try {
       // Remove drop indicators and reset block positions
@@ -1722,14 +1998,14 @@ async function handleDrop(e) {
         b.style.transform = '';
         b.style.transition = '';
       });
-      
+
       // Reorder blocks array
       const [movedBlock] = blocks.splice(fromIndex, 1);
       blocks.splice(toIndex, 0, movedBlock);
-      
+
       // Re-render blocks with animation
       renderBlocks(blocks);
-      
+
       // Save new order to Firestore
       if (window.firebaseUtils.currentUser) {
         try {
@@ -1752,7 +2028,7 @@ async function handleDrop(e) {
 
 window.renderBlocks = renderBlocks;
 
-window.editBlock = function(index) {
+window.editBlock = function (index) {
   editingBlockIndex = index;
   const block = blocks[index];
   if (block.type === 'embed') {
@@ -1771,7 +2047,7 @@ window.editBlock = function(index) {
     blockLinkInput.value = block.link || '';
     blockImgInput.value = '';
     blockImgInput.dataset.icon = block.icon || DEFAULT_ICON;
-    
+
     // Show/hide details container based on whether a link exists
     const blockDetailsContainer = document.getElementById('block-details-container');
     if (block.link) {
@@ -1795,15 +2071,16 @@ window.editBlock = function(index) {
   openBlockModal(true);
 };
 
-window.deleteBlock = async function(index) {
+window.deleteBlock = async function (index) {
   if (!window.firebaseUtils.currentUser) return;
 
   if (confirm('Are you sure you want to delete this block?')) {
     const blockToDelete = blocks[index];
+    const ownerEmail = window.firebaseUtils.currentUser.email;
 
     // Delete images for default/large-image blocks
     if ((!blockToDelete.type || blockToDelete.type === 'default' || blockToDelete.type === 'large-image') &&
-        blockToDelete.icon && !blockToDelete.icon.includes(DEFAULT_ICON)) {
+      blockToDelete.icon && !blockToDelete.icon.includes(DEFAULT_ICON)) {
       await window.firebaseUtils.deleteImage(blockToDelete.icon);
     }
 
@@ -1814,6 +2091,19 @@ window.deleteBlock = async function(index) {
           await window.firebaseUtils.deleteImage(slide.icon);
         }
       }
+    }
+
+    // Delete corresponding global block (if present)
+    try {
+      let globalId = blockToDelete.globalId;
+      if (!globalId && blockToDelete.createdAt && window.firebaseUtils.generateGlobalBlockId) {
+        globalId = window.firebaseUtils.generateGlobalBlockId(ownerEmail, blockToDelete.createdAt);
+      }
+      if (globalId && window.firebaseUtils.deleteGlobalBlock) {
+        await window.firebaseUtils.deleteGlobalBlock(globalId);
+      }
+    } catch (err) {
+      console.error('Error deleting corresponding global block', err);
     }
 
     blocks.splice(index, 1);
@@ -1862,14 +2152,14 @@ async function refreshConnectionsOnLoad() {
     renderConnectionsList();
     return;
   }
-  
+
   try {
     await fetchAllUsers();
     const user = window.firebaseUtils.currentUser;
     const docRef = await window.firebaseUtils.getUserDocRef(user.email);
     const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       const data = docSnap.data();
       console.log('User connections data:', data);
@@ -1878,7 +2168,7 @@ async function refreshConnectionsOnLoad() {
     } else {
       currentUserConnections = [];
     }
-    
+
     renderConnectionsList();
   } catch (error) {
     console.error('Error loading connections:', error);
@@ -1894,15 +2184,15 @@ function renderConnectionsList() {
     connectionsList.innerHTML = '<div style="color:#888;">Log in to see connections.</div>';
     return;
   }
-  
+
   const mutuals = getMutualConnections();
   console.log('Mutual connections:', mutuals);
-  
+
   if (mutuals.length === 0) {
     connectionsList.innerHTML = '';
     return;
   }
-  
+
   connectionsList.innerHTML = mutuals.map(user => `
     <div style="display:flex;align-items:center;margin-bottom:8px;">
       <img src="${user.avatar || 'static/img/default-icon.png'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:10px;">
@@ -1914,16 +2204,18 @@ function renderConnectionsList() {
 // Modal open/close logic
 manageConnectionsBtn.onclick = async () => {
   if (!window.firebaseUtils.currentUser) return;
-  connectionsModal.style.display = 'flex';
-  connectionsSearch.value = '';
-  await refreshConnectionsModalList();
-  connectionsSearch.focus();
+  // Open the new connections onboarding directly to step 2 (index), replacing the old modal
+  try { if (window.startConnectionsOnboarding) window.startConnectionsOnboarding(2); } catch (_) { }
 };
-closeConnectionsModalBtn.onclick = () => {
-  connectionsModal.style.display = 'none';
-};
+if (closeConnectionsModalBtn && connectionsModal) {
+  closeConnectionsModalBtn.onclick = () => {
+    connectionsModal.style.display = 'none';
+  };
+}
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') connectionsModal.style.display = 'none';
+  if (e.key === 'Escape' && connectionsModal && connectionsModal.style.display === 'flex') {
+    connectionsModal.style.display = 'none';
+  }
 });
 
 // Fetch all users and update modal list
@@ -1976,10 +2268,10 @@ function renderConnectionsModalList() {
     }).join('');
 }
 
-connectionsSearch.oninput = renderConnectionsModalList;
+if (connectionsSearch) connectionsSearch.oninput = renderConnectionsModalList;
 
 // Firestore helpers for connections
-window.toggleConnection = async function(email, isConnected) {
+window.toggleConnection = async function (email, isConnected) {
   if (!window.firebaseUtils.currentUser) return;
   const myEmail = window.firebaseUtils.currentUser.email;
   // Get my doc
@@ -2007,15 +2299,15 @@ window.renderConnectionsList = renderConnectionsList;
 
 if (window.firebaseUtils) {
   window.firebaseUtils.currentUserDoc = {};
-  window.firebaseUtils.getAllUsers = async function() {
+  window.firebaseUtils.getAllUsers = async function () {
     const { getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
     return getDocs(collection(window.firebaseUtils.db, 'users'));
   };
-  window.firebaseUtils.getUserDocRef = async function(email) {
+  window.firebaseUtils.getUserDocRef = async function (email) {
     const { doc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
     return doc(window.firebaseUtils.db, 'users', email);
   };
-  window.firebaseUtils.updateConnections = async function(docRef, connections) {
+  window.firebaseUtils.updateConnections = async function (docRef, connections) {
     const { updateDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
     await updateDoc(docRef, { connections });
   };
@@ -2036,7 +2328,7 @@ function renderPracticePills(selected = []) {
   practicesButtonsDiv.innerHTML = "";
   // Update the global selectedPractices array
   selectedPractices = [...selected];
-  
+
   PRACTICES.forEach(practice => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -2092,7 +2384,7 @@ async function loadPracticesFromFirestore(email) {
 
 // Patch into your loadUserData logic:
 const origLoadUserData = window.loadUserData;
-window.loadUserData = async function(email) {
+window.loadUserData = async function (email) {
   await loadPracticesFromFirestore(email);
   if (origLoadUserData) await origLoadUserData(email);
 };
@@ -2101,7 +2393,7 @@ window.loadUserData = async function(email) {
 renderPracticePills([]);
 
 // --- PROFILE PROGRESS BAR LOGIC ---
-window.updateProfileProgress = function(hasProfileDetails, hasConnections, hasBlocks) {
+window.updateProfileProgress = function (hasProfileDetails, hasConnections, hasBlocks) {
   const progressBarFill = document.getElementById('progressBarFill');
   const circle1 = document.getElementById('progressCircle1');
   const circle2 = document.getElementById('progressCircle2');
@@ -2142,7 +2434,7 @@ window.updateProfileProgress = function(hasProfileDetails, hasConnections, hasBl
 
 // Initialize progress bar for a logged-out state or before data loads
 if (document.getElementById('progressBarFill')) { // Ensure elements exist
-    window.updateProfileProgress(false, false, false);
+  window.updateProfileProgress(false, false, false);
 }
 // --- END PROFILE PROGRESS BAR LOGIC ---
 
@@ -2163,7 +2455,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const welcomeSlider = document.querySelector('.welcome-slider');
   const createAccountBtn = document.getElementById('create-account-btn');
   const backToSlide1Btn = document.getElementById('back-to-slide-1');
-  
+
   if (welcomeStartBtn && welcomeSlider) {
     welcomeStartBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2194,7 +2486,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeCollapsibleSections(userData = {}) {
   const profileSection = document.getElementById('profile-collapsible-section');
   const connectionsSection = document.getElementById('connections-collapsible-section');
-  
+
   if (!profileSection || !connectionsSection) return;
 
   // --- Logic for Profile Section ---
@@ -2210,7 +2502,7 @@ function initializeCollapsibleSections(userData = {}) {
       profileSection.classList.remove('collapsed');
     }
   }
-  
+
   // Update header content dynamically
   const collapsedAvatar = document.getElementById('collapsed-avatar-preview');
   const collapsedTitle = document.getElementById('collapsed-title');
@@ -2248,86 +2540,547 @@ window.initializeCollapsibleSections = initializeCollapsibleSections;
 
 // --- PREVIEW PAGE MODAL LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
-    const previewBtn = document.getElementById('preview-page-btn');
-    const previewModal = document.getElementById('preview-modal');
-    const previewModalClose = document.getElementById('preview-modal-close');
-    const previewIframe = document.getElementById('preview-iframe');
+  const previewBtn = document.getElementById('preview-page-btn');
+  const previewModal = document.getElementById('preview-modal');
+  const previewModalClose = document.getElementById('preview-modal-close');
+  const previewIframe = document.getElementById('preview-iframe');
 
-    if (previewBtn && previewModal && previewModalClose && previewIframe) {
-        previewBtn.addEventListener('click', () => {
-            const userDoc = window.firebaseUtils.currentUserDoc;
-            if (userDoc && userDoc.id) {
-                const baseUrl = window.location.origin;
-                const previewUrl = `${baseUrl}/?profile=${userDoc.id}`;
-                previewIframe.src = previewUrl;
-                previewModal.style.display = 'flex'; // Use flex to center content
-            } else {
-                alert('Could not find user profile information. Please try again.');
-                console.error('User data or user ID is not available.');
-            }
-        });
+  if (previewBtn && previewModal && previewModalClose && previewIframe) {
+    previewBtn.addEventListener('click', () => {
+      const userDoc = window.firebaseUtils.currentUserDoc;
+      if (userDoc && userDoc.id) {
+        const baseUrl = window.location.origin;
+        const title = (userDoc.title || '').toLowerCase().replace(/\s+/g,'');
+        const previewUrl = `${baseUrl}/?link=${title}`;
+        previewIframe.src = previewUrl;
+        previewModal.style.display = 'flex'; // Use flex to center content
+      } else {
+        alert('Could not find user profile information. Please try again.');
+        console.error('User data or user ID is not available.');
+      }
+    });
 
-        const closeModal = () => {
-            previewModal.style.display = 'none';
-            previewIframe.src = ''; // Clear src to stop video/audio playback
-        };
+    const closeModal = () => {
+      previewModal.style.display = 'none';
+      previewIframe.src = ''; // Clear src to stop video/audio playback
+    };
 
-        previewModalClose.addEventListener('click', closeModal);
+    previewModalClose.addEventListener('click', closeModal);
 
-        previewModal.addEventListener('click', (e) => {
-            if (e.target === previewModal) {
-                closeModal();
-            }
-        });
+    previewModal.addEventListener('click', (e) => {
+      if (e.target === previewModal) {
+        closeModal();
+      }
+    });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && previewModal.style.display === 'flex') {
-                closeModal();
-            }
-        });
-    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && previewModal.style.display === 'flex') {
+        closeModal();
+      }
+    });
+  }
 });
 // --- END PREVIEW PAGE MODAL LOGIC ---
 // --- PREVIEW BUTTON SCROLL REVEAL LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('preview-btn-container');
-    const btn = document.getElementById('preview-page-btn');
-    if (!container || !btn) return;
+  const container = document.getElementById('preview-btn-container');
+  const btn = document.getElementById('preview-page-btn');
+  if (!container || !btn) return;
 
-    let lastY = window.scrollY;
-    const THRESHOLD = 200; // show only after scrolled this far
-    const HIDE_VELOCITY = 1.2; // px per ms; require fast upward scroll to hide
-    let lastT = performance.now();
+  let lastY = window.scrollY;
+  const THRESHOLD = 200; // show only after scrolled this far
+  const HIDE_VELOCITY = 1.2; // px per ms; require fast upward scroll to hide
+  let lastT = performance.now();
 
-    function updateVisibility() {
-        const computed = window.getComputedStyle(btn);
-        const isVisible = computed.display !== 'none' && !btn.disabled;
-        if (!isVisible) {
-            container.classList.remove('show');
-            return;
-        }
-        const now = performance.now();
-        const y = window.scrollY;
-        const dy = y - lastY;
-        const dt = Math.max(1, now - lastT);
-        const v = dy / dt; // px per ms, positive when going down
-        const goingDown = dy > 0;
-        lastY = y;
-        lastT = now;
-
-        if (goingDown && y > THRESHOLD) {
-            container.classList.add('show');
-        } else if (!goingDown) {
-            // Hide only if upward speed exceeds threshold and we're not near top
-            if (Math.abs(v) > HIDE_VELOCITY && y > 60) {
-                container.classList.remove('show');
-            }
-        }
+  function updateVisibility() {
+    const computed = window.getComputedStyle(btn);
+    const isVisible = computed.display !== 'none' && !btn.disabled;
+    if (!isVisible) {
+      container.classList.remove('show');
+      return;
     }
+    const now = performance.now();
+    const y = window.scrollY;
+    const dy = y - lastY;
+    const dt = Math.max(1, now - lastT);
+    const v = dy / dt; // px per ms, positive when going down
+    const goingDown = dy > 0;
+    lastY = y;
+    lastT = now;
 
-    updateVisibility();
-    window.addEventListener('scroll', updateVisibility, { passive: true });
-    const observer = new MutationObserver(updateVisibility);
-    observer.observe(btn, { attributes: true, attributeFilter: ['disabled', 'style', 'class'] });
+    if (goingDown && y > THRESHOLD) {
+      container.classList.add('show');
+    } else if (!goingDown) {
+      // Hide only if upward speed exceeds threshold and we're not near top
+      if (Math.abs(v) > HIDE_VELOCITY && y > 60) {
+        container.classList.remove('show');
+      }
+    }
+  }
+
+  updateVisibility();
+  window.addEventListener('scroll', updateVisibility, { passive: true });
+  const observer = new MutationObserver(updateVisibility);
+  observer.observe(btn, { attributes: true, attributeFilter: ['disabled', 'style', 'class'] });
 });
 // --- END PREVIEW BUTTON SCROLL REVEAL LOGIC ---
+
+// --- CONNECTIONS ONBOARDING MODAL ---
+(function () {
+  function getPerUserSeenKey() {
+    const email = window.firebaseUtils?.currentUser?.email || '';
+    return email ? `kr_connections_onboard_seen_v1:${email}` : null;
+  }
+  const overlay = document.getElementById('conn-onboard-overlay');
+  if (!overlay) return;
+  const body = document.getElementById('conn-onboard-body');
+  const title = document.getElementById('conn-onboard-title');
+  const back = document.getElementById('conn-onboard-back');
+  const next = document.getElementById('conn-onboard-next');
+  const skip = document.getElementById('conn-onboard-skip');
+  const dots = overlay.querySelectorAll('.onboard-dot');
+  let step = 0; // 0..3
+  let usersCache = [];
+  let myEmail = null;
+  let svg = null, container = null, sim = null, zoomBehavior = null;
+  let nodes = [], links = [];
+  let hasAnyRequest = false;
+
+  function setDots() { dots.forEach((d, i) => d.classList.toggle('active', i === step)); }
+  function setHeader() {
+    const titles = [
+      'Welcome to the Network!',
+      'Welcome to the Network!',
+      'Add People You’ve Worked With:',
+      'Amazing! You’re All Setup :)'
+    ];
+    title.textContent = titles[step] || '';
+  }
+  function clearBody() { while (body.firstChild) body.removeChild(body.firstChild); }
+
+  function initSvg(height = 220) {
+    const wrap = document.createElement('div');
+    wrap.id = 'conn-web-wrap';
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.id = 'conn-web-svg';
+    s.setAttribute('height', String(height));
+    // Improve touch interactions on mobile for panning/zooming
+    s.style.touchAction = 'none';
+    wrap.appendChild(s); body.appendChild(wrap);
+    svg = d3.select(s);
+    container = svg.append('g').attr('class', 'conn-net');
+    // Enable zoom & pan similar to index web
+    zoomBehavior = d3.zoom()
+      .scaleExtent([0.6, 3])
+      .on('zoom', (event) => {
+        container.attr('transform', event.transform);
+      });
+    svg.call(zoomBehavior).on('dblclick.zoom', null);
+    // Temporarily block interactions for first 2s on open
+    s.style.pointerEvents = 'none';
+    setTimeout(()=>{ s.style.pointerEvents = 'auto'; }, 2000);
+  }
+  function pulseNode(sel) {
+    sel.transition().duration(800).attr('r', 10).ease(d3.easeCubicInOut)
+    .transition().duration(800).attr('r', 8).ease(d3.easeCubicInOut).on('end', () => pulseNode(sel));
+  }
+  function pulseBetween(sel, rSmall, rLarge, dur=800) {
+    sel.transition().duration(dur).attr('r', rLarge).ease(d3.easeCubicInOut)
+      .transition().duration(dur).attr('r', rSmall).ease(d3.easeCubicInOut)
+      .on('end', ()=> pulseBetween(sel, rSmall, rLarge, dur));
+  }
+
+  function renderStep() {
+    setDots(); setHeader();
+    back.style.visibility = step > 0 ? 'visible' : 'hidden';
+    skip.style.display = step === 2 ? 'inline-block' : (step === 3 ? 'none' : 'none');
+    next.textContent = step === 1 ? "Let's Get Connected" : (step === 2 ? 'Finish' : (step === 3 ? "Let's Build Your Profile" : 'Continue'));
+    if (step === 2) {
+      // Hide Finish until at least one connection request exists
+      next.style.display = hasAnyRequest ? 'inline-block' : 'none';
+    } else {
+      next.style.display = 'inline-block';
+    }
+    clearBody();
+
+    if (step === 0) {
+      initSvg();
+      const w = body.querySelector('#conn-web-svg').clientWidth, h = 220;
+      const myTitle = (window.firebaseUtils?.currentUserDoc?.title || window.firebaseUtils?.currentUser?.email || 'You');
+      nodes = [{ id: 'me', title: myTitle, x: w / 2, y: h / 2 }]; links = [];
+      const main = container.append('circle').attr('cx', w / 2).attr('cy', h / 2).attr('r', 8).attr('fill', '#ffa500');
+      const ring0 = container.append('circle')
+        .attr('cx', w/2).attr('cy', h/2).attr('r', 14)
+        .attr('fill', '#ffa500')
+        .attr('opacity', 0.25);
+      pulseBetween(ring0, 14, 20, 900);
+      const meAvatar0 = window.firebaseUtils?.currentUserDoc?.avatar;
+      if (meAvatar0) {
+        const clipId0 = `conn-clip-me-${Date.now()}`;
+        svg.append('defs').append('clipPath').attr('id', clipId0)
+          .append('circle').attr('cx', w/2).attr('cy', h/2).attr('r', 11);
+        container.append('image')
+          .attr('href', meAvatar0)
+          .attr('x', w/2 - 11)
+          .attr('y', h/2 - 11)
+          .attr('width', 22)
+          .attr('height', 22)
+          .attr('clip-path', `url(#${clipId0})`);
+      }
+      container.append('text').attr('class', 'node-title').attr('x', w / 2 + 12).attr('y', h / 2 + 4).attr('fill', '#d8d8d8').text(myTitle);
+      pulseNode(main);
+      body.insertAdjacentHTML('beforeend', '<div class="center-align" style="margin-top:6px;">This is you... a single node in a vast creative web.</div><div class="center-align" style="margin-top:8px;">The network is a web of users, connected and linked through their collaborations</div>');
+    } else if (step === 1) {
+      initSvg();
+      const w = body.querySelector('#conn-web-svg').clientWidth, h = 220;
+      const center = { x: w / 2, y: h / 2 };
+      const neigh = [{ x: center.x - 90, y: center.y - 20 }, { x: center.x + 70, y: center.y - 30 }, { x: center.x + 10, y: center.y + 70 }];
+      const neighNames = ['Photographer', 'Set Designer', 'Ed'];
+      const myTitle = (window.firebaseUtils?.currentUserDoc?.title || window.firebaseUtils?.currentUser?.email || 'You');
+      // Layer groups to ensure links behind nodes
+      const gLines = container.append('g').attr('class','conn2-links');
+      const gNodes = container.append('g').attr('class','conn2-nodes');
+      const gLabels = container.append('g').attr('class','conn2-labels');
+      // Add pulsing fill first (so it sits behind)
+      const ring1 = gNodes.append('circle')
+        .attr('cx', center.x).attr('cy', center.y).attr('r', 14)
+        .attr('fill', '#ffa500')
+        .attr('opacity', 0.25);
+      pulseBetween(ring1, 14, 20, 900);
+      // Add the core node on top of the pulsing fill
+      gNodes.append('circle').attr('cx', center.x).attr('cy', center.y).attr('r', 8).attr('fill', '#ffa500');
+      const meAvatar1 = window.firebaseUtils?.currentUserDoc?.avatar;
+      if (meAvatar1) {
+        const clipId1 = `conn-clip-me-${Date.now()}`;
+        svg.append('defs').append('clipPath').attr('id', clipId1)
+          .append('circle').attr('cx', center.x).attr('cy', center.y).attr('r', 11);
+        gNodes.append('image')
+          .attr('href', meAvatar1)
+          .attr('x', center.x - 11)
+          .attr('y', center.y - 11)
+          .attr('width', 22)
+          .attr('height', 22)
+          .attr('clip-path', `url(#${clipId1})`);
+      }
+      gLabels.append('text').attr('class', 'node-title').attr('x', center.x + 12).attr('y', center.y + 4).attr('fill', '#d8d8d8').text(myTitle);
+      // delayed neighbors + links with ripple/draw effect
+      neigh.forEach((p, i) => {
+        const delay = 250 + i * 220;
+        setTimeout(() => {
+          gLines.append('line').attr('x1', center.x).attr('y1', center.y).attr('x2', center.x).attr('y2', center.y)
+            .attr('stroke', '#aaa').attr('stroke-width', 1)
+            .transition().duration(400).attr('x2', p.x).attr('y2', p.y);
+          const c = gNodes.append('circle').attr('cx', center.x).attr('cy', center.y).attr('r', 0).attr('fill', '#69b3a2');
+          c.transition().duration(400).attr('cx', p.x).attr('cy', p.y).attr('r', 7);
+          gLabels.append('text').attr('class', 'node-title').attr('x', p.x + 12).attr('y', p.y + 4)
+            .attr('fill', '#d8d8d8').style('opacity', 0).text(neighNames[i] || 'KR Member')
+            .transition().duration(400).style('opacity', 1);
+          const ripple = gNodes.append('circle').attr('cx', p.x).attr('cy', p.y).attr('r', 1).attr('stroke', '#58a6ff').attr('fill', 'none').attr('opacity', 0.8);
+          ripple.transition().duration(600).attr('r', 22).attr('opacity', 0).remove();
+        }, delay);
+      });
+      body.insertAdjacentHTML('beforeend', '<div class="center-align" style="margin-top:8px;">The more you connect, the more you get found, and the wider your reach becomes.</div>');
+    } else if (step === 2) {
+      initSvg(360);
+      // Overlay container inside web wrap for search + panel
+      const wrap = body.querySelector('#conn-web-wrap');
+      const overlay = document.createElement('div');
+      overlay.className = 'conn-overlay';
+      wrap.appendChild(overlay);
+      const search = document.createElement('input');
+      search.type = 'text'; search.className = 'conn-search'; search.placeholder = 'Search users by title...';
+      overlay.appendChild(search);
+      const panel = document.createElement('div'); panel.className = 'conn-panel'; overlay.appendChild(panel);
+      const title = document.createElement('div'); title.className = 'conn-panel-title'; title.textContent = 'KR Members:'; panel.appendChild(title);
+      const list = document.createElement('div'); list.className = 'conn-list'; panel.appendChild(list);
+      // Load users and my connections
+      queueMicrotask(async () => {
+        try {
+          const user = window.firebaseUtils.currentUser;
+          if (!user) return;
+          myEmail = user.email;
+          const snap = await window.firebaseUtils.getAllUsers();
+          usersCache = snap.docs ? snap.docs.map(doc => ({ email: doc.id, ...doc.data() })) : [];
+          const myRef = await window.firebaseUtils.getUserDocRef(myEmail);
+          const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+          const mySnap = await getDoc(myRef);
+          const myData = mySnap.exists() ? mySnap.data() : {};
+          const myConns = Array.isArray(myData.connections) ? myData.connections : [];
+          const dismissed = Array.isArray(myData.dismissedConnectionRequests) ? myData.dismissedConnectionRequests : [];
+          // Compute pending: users who added me
+          const pendingFromOthers = usersCache.filter(u => Array.isArray(u.connections) && u.connections.includes(myEmail) && !myConns.includes(u.email) && !dismissed.includes(u.email)).map(u => u.email);
+          renderLiveNetwork(usersCache, myConns, pendingFromOthers);
+          hasAnyRequest = pendingFromOthers.length > 0;
+          updateFooter();
+          renderList(usersCache, myConns, pendingFromOthers);
+          search.addEventListener('input', () => { renderList(usersCache, myConns, pendingFromOthers, search.value.trim().toLowerCase()); });
+        } catch (e) { console.error('conn-onboard load error', e); }
+      });
+    } else if (step === 3) {
+      initSvg(260);
+      body.insertAdjacentHTML('beforeend', '<div class="center-align" style="margin-top:10px;">Your connection requests has been sent. Also, let them know you’ve added them!</div>');
+      // Load users and render full network (same as page 3, without the list/search)
+      queueMicrotask(async () => {
+        try {
+          const user = window.firebaseUtils.currentUser;
+          if (!user) return;
+          myEmail = user.email;
+          const snap = await window.firebaseUtils.getAllUsers();
+          usersCache = snap.docs ? snap.docs.map(doc => ({ email: doc.id, ...doc.data() })) : [];
+          const myRef = await window.firebaseUtils.getUserDocRef(myEmail);
+          const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+          const mySnap = await getDoc(myRef);
+          const myData = mySnap.exists() ? mySnap.data() : {};
+          const myConns = Array.isArray(myData.connections) ? myData.connections : [];
+          const dismissed = Array.isArray(myData.dismissedConnectionRequests) ? myData.dismissedConnectionRequests : [];
+          const pendingFromOthers = usersCache.filter(u => Array.isArray(u.connections) && u.connections.includes(myEmail) && !myConns.includes(u.email) && !dismissed.includes(u.email)).map(u => u.email);
+          renderLiveNetwork(usersCache, myConns, pendingFromOthers);
+        } catch (e) { console.error('conn-onboard page 4 load error', e); }
+      });
+    }
+  }
+
+  function renderLiveNetwork(allUsers, myConns, pending) {
+    const s = body.querySelector('#conn-web-svg'); if (!s) return;
+    const w = s.clientWidth, h = s.clientHeight;
+    const myDisplay = (window.firebaseUtils?.currentUserDoc?.title || myEmail || 'You');
+    const myNode = { id: myEmail || 'me', title: myDisplay };
+    const neighbors = new Set([...myConns, ...pending]);
+    const others = allUsers.filter(u => u.email !== myEmail && !neighbors.has(u.email)).slice(0, 45); // limit to 45 to avoid performance issues
+    nodes = [myNode, ...[...neighbors].map(e => {
+      const u = allUsers.find(x => x.email === e); return { id: e, title: (u?.title || e) };
+    }), ...others.map(u => ({ id: u.email, title: (u.title || u.email) }))];
+    const displayed = new Set(nodes.map(n => n.id));
+    const userMap = new Map(allUsers.map(u => [u.email, u]));
+    links = [];
+    // My links: solid if mutual, dotted if pending (either direction)
+    myConns.forEach(e => {
+      if (!displayed.has(e)) return;
+      const theirConns = Array.isArray(userMap.get(e)?.connections) ? userMap.get(e).connections : [];
+      const mutual = theirConns.includes(myEmail);
+      links.push({ source: myNode.id, target: e, style: mutual ? 'solid' : 'dotted' });
+    });
+    // Pending inbound (they added me but I haven't added them)
+    pending.forEach(e => {
+      if (!displayed.has(e)) return;
+      if (!myConns.includes(e)) links.push({ source: myNode.id, target: e, style: 'dotted' });
+    });
+    // Grey links: real mutual connections among displayed others (excluding my node)
+    const dedup = new Set();
+    displayed.forEach(a => {
+      if (a === myNode.id) return;
+      const aConns = Array.isArray(userMap.get(a)?.connections) ? userMap.get(a).connections : [];
+      aConns.forEach(b => {
+        if (!displayed.has(b) || b === a || b === myNode.id) return;
+        const bConns = Array.isArray(userMap.get(b)?.connections) ? userMap.get(b).connections : [];
+        if (!bConns.includes(a)) return; // require mutual
+        const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+        if (!dedup.has(key)) {
+          dedup.add(key);
+          links.push({ source: a, target: b, style: 'grey' });
+        }
+      });
+    });
+    // D3 render
+    container.selectAll('*').remove();
+    sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(80).strength(l => l.style === 'grey' ? 0.05 : 0.3))
+      .force('charge', d3.forceManyBody().strength(-140))
+      .force('center', d3.forceCenter(w / 2, h / 2));
+    const linkSel = container.append('g').selectAll('line').data(links).join('line')
+      .attr('stroke', l => l.style === 'solid' || l.style === 'dotted' ? '#ffffff' : '#555')
+      .attr('stroke-width', l => l.style === 'solid' ? 2 : 1)
+      .attr('stroke-dasharray', l => l.style === 'dotted' ? '4 4' : '');
+    const nodeSel = container.append('g').selectAll('circle').data(nodes).join('circle')
+      .attr('r', d => d.id === myNode.id ? 8 : 6)
+      .attr('fill', d => d.id === myNode.id ? '#ffa500' : '#9aa4b2');
+    // pulsing ring for my node in live view
+    const meNodeInit = nodes.find(n=>n.id===myNode.id);
+    let ringLive = null;
+    if (meNodeInit) {
+      ringLive = container.append('circle')
+        .attr('cx', meNodeInit.x||w/2).attr('cy', meNodeInit.y||h/2).attr('r', 14)
+        .attr('fill', '#ffa500')
+        .attr('opacity', 0.25);
+      pulseBetween(ringLive, 14, 20, 900);
+    }
+    const labelSel = container.append('g').selectAll('text').data(nodes).join('text')
+      .attr('class', 'node-title').attr('fill', '#d8d8d8')
+      .text(d => d.title || d.id);
+
+    // Temporarily pin my node at canvas center for first 2 seconds
+    const mePin = nodes.find(n => n.id === myNode.id);
+    if (mePin) {
+      mePin.fx = w / 2; mePin.fy = h / 2;
+      setTimeout(() => { mePin.fx = null; mePin.fy = null; }, 2000);
+    }
+    // Avatar overlay for my node in live view
+    const meAvatarLive = window.firebaseUtils?.currentUserDoc?.avatar;
+    let avatarSelLive = null; let clipIdLive = null;
+    if (meAvatarLive) {
+      clipIdLive = `conn-clip-me-live-${Date.now()}`;
+      svg.append('defs').append('clipPath').attr('id', clipIdLive).append('circle').attr('r', 11);
+      avatarSelLive = container.append('image').attr('href', meAvatarLive).attr('width', 22).attr('height', 22).attr('clip-path', `url(#${clipIdLive})`);
+    }
+    let centeredOnce = false;
+    sim.on('tick', () => {
+      linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      nodeSel.attr('cx', d => d.x).attr('cy', d => d.y);
+      labelSel.attr('x', d => (d.x || 0) + 12).attr('y', d => (d.y || 0) + 4);
+      if (avatarSelLive) {
+        const meNode = nodes.find(n => n.id === myNode.id);
+        if (meNode) {
+          svg.select(`#${clipIdLive} circle`).attr('cx', meNode.x).attr('cy', meNode.y);
+          avatarSelLive.attr('x', (meNode.x || 0) - 11).attr('y', (meNode.y || 0) - 11);
+        }
+      }
+      if (ringLive) {
+        const meNode = nodes.find(n => n.id === myNode.id);
+        if (meNode) {
+          ringLive.attr('cx', meNode.x || 0).attr('cy', meNode.y || 0);
+        }
+      }
+      // Center the view on my node once at start
+      if (!centeredOnce && zoomBehavior) {
+        const meNode = nodes.find(n => n.id === myNode.id);
+        if (meNode && Number.isFinite(meNode.x) && Number.isFinite(meNode.y)) {
+          const tx = (w / 2) - meNode.x;
+          const ty = (h / 2) - meNode.y;
+          svg.call(zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(1));
+          centeredOnce = true;
+        }
+      }
+    });
+  }
+
+  function renderList(allUsers, myConns, pending, q = '') {
+    const list = body.querySelector('.conn-list'); if (!list) return;
+    const me = myEmail;
+    const filtered = allUsers
+      .filter(u => u.email !== me)
+      .filter(u => (u.title || '').toLowerCase().includes(q));
+    filtered.sort((a, b) => (a.title || a.email).localeCompare(b.title || b.email));
+    list.innerHTML = filtered.map(u => {
+      const isConnected = myConns.includes(u.email); // I added them
+      const theirConnections = Array.isArray(u.connections) ? u.connections : [];
+      const theyAddedMe = theirConnections.includes(me);
+      const isMutual = isConnected && theyAddedMe;
+      // Labeling rules:
+      // - Mutual: Disconnect (red)
+      // - Outbound pending (I added them, they haven't added me): Request Sent (grey)
+      // - Inbound pending (they added me, I haven't): Connect (blue)
+      // - None: Connect (blue)
+      let label = 'Connect';
+      let cls = 'btn-blue';
+      let state = 'none';
+      if (isMutual) { label = 'Disconnect'; cls = 'btn-red'; state = 'mutual'; }
+      else if (isConnected && !theyAddedMe) { label = 'Request Sent'; cls = 'btn-grey'; state = 'outbound'; }
+      else { label = 'Connect'; cls = 'btn-blue'; state = 'none'; }
+      return `<div class="conn-row" data-email="${u.email}"><div class="left"><img src="${u.avatar || 'static/img/default-avatar.png'}"><span>${u.title || u.email}</span></div><button class="${cls}" data-state="${state}">${label}</button></div>`;
+    }).join('');
+    list.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.currentTarget.closest('.conn-row');
+        const email = row.getAttribute('data-email');
+        const state = e.currentTarget.getAttribute('data-state');
+        try {
+          const myRef = await window.firebaseUtils.getUserDocRef(myEmail);
+          let mySnap = null; {
+            const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+            mySnap = await getDoc(myRef);
+          }
+          const myData = mySnap.exists() ? mySnap.data() : {};
+          let connArr = Array.isArray(myData.connections) ? myData.connections : [];
+          // Recompute counterpart's connections to decide mutuality
+          const targetUser = allUsers.find(u => u.email === email) || {};
+          const theirConnections = Array.isArray(targetUser.connections) ? targetUser.connections : [];
+          const theyAddedMe = theirConnections.includes(myEmail);
+          const iAddedThem = connArr.includes(email);
+
+          if (state === 'mutual') {
+            // Disconnect
+            connArr = connArr.filter(x => x !== email);
+            await window.firebaseUtils.updateConnections(myRef, connArr);
+          } else if (state === 'outbound') {
+            // Cancel my request
+            connArr = connArr.filter(x => x !== email);
+            await window.firebaseUtils.updateConnections(myRef, connArr);
+          } else {
+            // Send/accept connection (adds my connection)
+            connArr = [...new Set([...connArr, email])];
+            await window.firebaseUtils.updateConnections(myRef, connArr);
+            hasAnyRequest = true; updateFooter();
+          }
+          // Re-render live
+          const snap = await window.firebaseUtils.getAllUsers();
+          usersCache = snap.docs ? snap.docs.map(doc => ({ email: doc.id, ...doc.data() })) : [];
+          const mySnap2 = await (await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js')).getDoc(myRef);
+          const myData2 = mySnap2.exists() ? mySnap2.data() : {};
+          const myConns2 = Array.isArray(myData2.connections) ? myData2.connections : [];
+          // recompute pendingFromOthers (inbound requests)
+          const pendingFromOthers = usersCache.filter(u => Array.isArray(u.connections) && u.connections.includes(myEmail) && !myConns2.includes(u.email)).map(u => u.email);
+          renderLiveNetwork(usersCache, myConns2, pendingFromOthers);
+          renderList(usersCache, myConns2, pendingFromOthers, (body.querySelector('.conn-search')?.value || '').trim().toLowerCase());
+        } catch (err) { console.error('toggle conn error', err); }
+      });
+    });
+  }
+
+  function updateFooter() {
+    if (step === 2) {
+      next.textContent = 'Finish';
+      // Toggle visibility based on whether any request exists
+      if (next) next.style.display = hasAnyRequest ? 'inline-block' : 'none';
+    }
+  }
+
+  function scrollToBlocks() {
+    try {
+      const blocks = document.querySelector('.blocks-section');
+      if (!blocks) return;
+      // Ensure expanded if collapsible systems hide it (not collapsible by id, so just scroll)
+      blocks.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (_) { }
+  }
+
+  function render() { setHeader(); renderStep(); }
+  function go(n) { step = Math.max(0, Math.min(3, n)); render(); }
+
+  back?.addEventListener('click', () => go(step - 1));
+  next?.addEventListener('click', () => {
+    if (step < 3) {
+      go(step + 1);
+    } else {
+      overlay.classList.remove('visible');
+      document.body.style.overflow = '';
+      try {
+        const key = getPerUserSeenKey();
+        if (key) localStorage.setItem(key, '1');
+      } catch (_) { }
+      scrollToBlocks();
+    }
+  });
+  skip?.addEventListener('click', () => {
+    overlay.classList.remove('visible');
+    document.body.style.overflow = '';
+    try {
+      const key = getPerUserSeenKey();
+      if (key) localStorage.setItem(key, '1');
+    } catch (_) { }
+    scrollToBlocks();
+  });
+
+  window.startConnectionsOnboarding = function (initialStep) {
+    try { if (!overlay) return; overlay.style.display = ''; } catch (_) { }
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    if (typeof initialStep === 'number' && isFinite(initialStep)) {
+      step = Math.max(0, Math.min(3, Math.floor(initialStep)));
+    } else {
+      step = 0;
+    }
+    hasAnyRequest = false;
+    render();
+  };
+})();
+// --- END CONNECTIONS ONBOARDING MODAL ---

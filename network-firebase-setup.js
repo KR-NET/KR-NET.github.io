@@ -87,6 +87,11 @@ onAuthStateChanged(auth, async (user) => {
     }
     
     await loadInitialData(user);
+
+    // Show locate-me button for logged-in users; visibility may still be
+    // further controlled by network-app.js depending on node presence.
+    const locateBtn = document.getElementById('locate-me-btn');
+    if (locateBtn) locateBtn.style.display = 'flex';
   } else {
     // User is signed out
     const avatarSrc = 'static/img/default-avatar.png';
@@ -106,6 +111,8 @@ onAuthStateChanged(auth, async (user) => {
       mobileUserStatusDiv.style.display = 'flex'; // Show the div
     }
     // You might want to clear the graph or show a "logged out" state
+    const locateBtn = document.getElementById('locate-me-btn');
+    if (locateBtn) locateBtn.style.display = 'none';
   }
   updateNavbarForAuth(); // Update navbar on auth state change
 });

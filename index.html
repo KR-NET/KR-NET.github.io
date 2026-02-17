@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>KR NETWORK</title>
+
+    <!-- Meta Tags for social media sharing -->
+    <meta name="description" content="Platforming Community" />
+    <meta property="og:title" content="KR NETWORK" />
+    <meta property="og:description" content="Platforming Community" />
+    <meta
+      property="og:image"
+      content="https://kr-net.github.io/static/img/coverpicture.png"
+    />
+    <meta property="og:url" content="https://kr-net.github.io/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170/build/three.module.js",
+        "jsm/": "https://cdn.jsdelivr.net/npm/three@0.170/examples/jsm/"
+      }
+    }
+    </script>
+
+    <link rel="stylesheet" href="static/css/styles.css" />
+    <!-- REMOVED FIREBASE COMPAT (GOT MODULAR ONE ANYWAYS) -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script> -->
+
+    <link rel="icon" type="image/png" href="static/img/KRICON.png" />
+
+    <!-- Immediate profile focus mode detection -->
+    <script>
+      // Check for link parameter immediately and add class before page renders
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('link')) {
+        document.documentElement.classList.add('profile-focus-mode');
+      }
+
+      // Apply initial hidden opacity to UI elements for staggered reveal
+      document.addEventListener('DOMContentLoaded', () => {
+        const selectors = [
+          '.kr-navbar',
+          '#network-searchbar-container',
+          '#notification-bell-btn',
+          '#vision-mode-controls',
+          '#join-kr-button-fixed',
+          '#fixed-top-logo',
+          '.kr-mobile-navbar-container',
+          '#hamburger-btn',
+          '#logged-in-user-status'
+        ];
+        selectors.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => el.classList.add('fade-in-hidden'));
+        });
+      });
+    </script>
+
+    <style>
+      /* Notification Bell */
+      #notification-bell-btn {
+        position: relative;
+        background: none;
+        border: 1px solid #ffffff;
+        cursor: pointer;
+        padding: 5px;
+      }
+
+      #notification-bell-btn.has-notifications .notification-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 10px;
+        height: 10px;
+        background-color: #ff3b30;
+        border-radius: 50%;
+        border: 1.5px solid #1c1c1e;
+        /* Match background color of search bar */
+      }
+
+      /* Notification Popup */
+      #notification-popup-overlay {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      }
+
+      /* Connect Confirm Popup */
+      #connect-confirm-overlay {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100000;
+      }
+
+      #connect-confirm-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #connect-confirm-content {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 420px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        text-align: left;
+      }
+
+      #connect-confirm-content h2 {
+        margin: 0 0 8px 0;
+      }
+
+      .connect-confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      /* Simple toast */
+      #connect-toast {
+        position: fixed;
+        top: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #222;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px #0003;
+        z-index: 100001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        font-size: 1rem;
+      }
+
+      #connect-toast.visible {
+        opacity: 1;
+      }
+
+      #notification-popup-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #notification-popup-content {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 450px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      .notification-list {
+        margin-top: 15px;
+      }
+
+      .notification-item {
+        background-color: #2c2c2e;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        position: relative;
+        border-left: 3px solid transparent;
+      }
+
+      .notification-item.unread {
+        background-color: #3a3a3c;
+        border-left: 3px solid #0000ff;
+      }
+
+      .notification-item.unread .unread-indicator {
+        position: absolute;
+        top: 16px;
+        left: -6px;
+        width: 8px;
+        height: 8px;
+        background-color: #ff3b30;
+        border-radius: 50%;
+      }
+
+      .notification-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .notification-category-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+      }
+
+      .notification-category {
+        font-weight: 600;
+        font-size: 0.9em;
+      }
+
+      .notification-timestamp {
+        margin-left: auto;
+        font-size: 0.8em;
+        color: #aaa;
+      }
+
+      .notification-content {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .notification-text {
+        flex-grow: 1;
+      }
+
+      .notification-title {
+        font-size: 1.1em;
+        margin: 0 0 5px 0;
+        font-weight: bold;
+      }
+
+      .notification-body {
+        font-size: 0.95em;
+        color: #ddd;
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      .notification-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+
+      .notification-view-more {
+        display: block;
+        margin-top: 10px;
+        text-align: right;
+        font-size: 0.9em;
+        color: #58a6ff;
+        font-weight: bold;
+        text-decoration: none;
+      }
+
+      .notification-view-more:hover {
+        text-decoration: underline;
+      }
+
+      .no-notifications {
+        text-align: center;
+        color: #888;
+        padding: 20px 0;
+      }
+
+      /* Join KR Popup Styles */
+      .join-kr-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        z-index: 999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .join-kr-popup-overlay.active {
+        display: flex;
+      }
+
+      /* Hide hamburger when popup is active */
+      body.join-popup-active #hamburger-btn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* Hide original join button when popup is active */
+      body.join-popup-active #join-kr-button-fixed {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* Hide logged-in user status when popup is active */
+      body.join-popup-active #logged-in-user-status {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .find-out-more-btn:hover {
+        background: #0000ff;
+        color: #ffffff;
+      }
+
+      /* Position JOIN button in center-bottom when popup is active */
+      .join-kr-main-btn.positioned {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        margin: 0;
+        transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      /* Mobile positioning for JOIN button */
+      @media (max-width: 768px) {
+        .join-kr-main-btn.positioned {
+          bottom: 70px;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+      }
+
+      .join-kr-popup-bubble {
+        position: absolute;
+        background: #0000ff;
+        border-radius: 50%;
+        transform: scale(0);
+        transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        z-index: 1;
+      }
+
+      .join-kr-popup-bubble.expand {
+        transform: scale(1);
+      }
+
+      .join-kr-popup-bubble.shrink {
+        transform: scale(0);
+        transition: transform 0.6s cubic-bezier(0.55, 0.06, 0.68, 0.19);
+      }
+
+      .join-kr-popup-content {
+        position: relative;
+        background: #0000ff;
+        color: white;
+        width: 100vw;
+        height: 100vh;
+        padding: 100px 20px 100px 20px;
+        box-sizing: border-box;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.3s ease 0.3s;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .join-kr-popup-content.visible {
+        opacity: 1;
+      }
+
+      .join-kr-popup-content.hiding {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      /* Background video styling */
+      .join-kr-background-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 1s ease-in-out;
+        z-index: -1;
+      }
+
+      .join-kr-background-video.loaded {
+        opacity: 1;
+      }
+
+      .close-join-popup {
+        position: absolute;
+        top: 40px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 40px;
+        cursor: pointer;
+        z-index: 3;
+      }
+
+      .join-popup-header {
+        margin-top: 10px;
+        margin-bottom: 0px;
+      }
+
+      .kr-globe-logo {
+        margin-bottom: 10px;
+      }
+
+      .kr-globe-logo img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+      }
+
+      .welcome-title {
+        font-size: 1.5rem;
+        font-weight: normal;
+        margin: 10px 0 5px 0;
+        line-height: 1.1;
+      }
+
+      @media (max-width: 768px) {
+        .welcome-title {
+          font-size: 1.0rem;
+        }
+      }
+
+      .kr-network-text {
+        font-size: 2.5rem;
+        font-weight: 900;
+      }
+
+      .beta-info {
+        font-size: 0.8rem;
+        margin: 5px 0;
+        line-height: 1;
+      }
+
+      .location-text {
+        color: #ffaa00;
+      }
+
+      .join-popup-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 600px;
+        width: 100%;
+        /* justify-content: space-between; */
+      }
+
+      .tagline-text {
+        font-size: 1.4rem;
+        font-style: italic;
+        margin: 10px 0;
+        line-height: 1.2;
+      }
+
+      .platform-description {
+        font-size: 1.1rem;
+        font-weight: normal;
+        width: 100%;
+        text-align: left;
+        margin: 0px 0 0px 0;
+      }
+
+      .benefits-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        /* max-width: 500px; */
+        margin: 10px 0;
+      }
+
+      .benefit-card {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        text-align: left;
+        border: 1px solid #333;
+      }
+
+      .find-out-more {
+        margin: 0px;
+        align-self: flex-end;
+      }
+
+      .find-out-more-btn {
+        background: #F68A3F;
+        text-decoration: none;
+        color: #ffffff;
+        float: right;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        border: 1px solid #ffffff;
+      }
+
+      .join-movement {
+        margin: 15px 0 10px 0;
+        text-align: center;
+      }
+
+      .movement-text {
+        font-size: 1.2rem;
+        font-style: italic;
+        margin: 0 0 5px 0;
+      }
+
+      .get-started-text {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .join-popup-about{
+        width: 90%;
+      }
+
+      .join-kr-main-btn {
+        background: #0000ff;
+        color: #ffffff;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: transform 0.2s ease;
+      }
+
+      .join-kr-main-btn:hover {
+        background: #ffaa00;
+        color: #333;
+      }
+
+      .popup-bottom-nav {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 400px;
+        margin-top: 10px;
+        padding: 10px 0;
+      }
+
+      
+
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+
+        .join-kr-popup-content {
+          padding-top: 10px;
+        }
+
+
+
+        .kr-network-text {
+          font-size: 2rem;
+        }
+
+        .tagline-text {
+          font-size: 1.3rem;
+        }
+
+        .platform-description {
+          font-size: 1.0rem;
+        }
+
+        .benefit-card {
+          /* font-size: 1rem; */
+          /* padding: 12px 16px; */
+        }
+
+        .close-join-popup {
+          font-size: 30px;
+          top: 15px;
+          right: 20px;
+        }
+      }
+      
+      /* JOIN hint bubble (iMessage-style) */
+      #join-hint-bubble {
+        position: fixed;
+        background: #0000ff;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 18px;
+        line-height: 1;
+        border-radius: 22px;
+        padding: 10px 16px;
+        z-index: 1100; /* Below welcome overlay (20000), above join button (1002) */
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+        transition: opacity .25s ease, transform .25s ease;
+        pointer-events: auto;
+        white-space: nowrap;
+      }
+      #join-hint-bubble.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      #join-hint-bubble::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: var(--tail-left, 50%);
+        transform: translateX(-50%);
+        border-width: 10px 10px 0 10px;
+        border-style: solid;
+        border-color: #0000ff transparent transparent transparent;
+      }
+      #join-hint-bubble .close-x {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #d9d9d9;
+        border: 1px solid #bfbfbf;
+        color: #333;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      #join-hint-bubble .label { user-select: none; }
+      @media (max-width: 480px) {
+        #join-hint-bubble { font-size: 16px; padding: 9px 14px; }
+      }
+    </style>
+  </head>
+
+  <body class="network-page-body">
+    <button id="hamburger-btn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div id="mobile-side-nav">
+      <a
+        href="profile.html"
+        id="mobile-logged-in-user-status"
+        style="display: none; text-decoration: none"
+      >
+        <img id="mobile-logged-in-user-avatar" src="" alt="User Avatar" />
+        <span id="mobile-logged-in-user-text"></span>
+      </a>
+      <a href="index.html">NETWORK</a>
+      <a href="collab.html">COLLAB</a>
+      <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E Productions</a></p>
+    </div>
+
+    <nav class="kr-navbar">
+      <a href="index.html" style="text-decoration: none; color: #0000ff">
+        <img src="static/img/networkicon.png" alt="Network" class="nav-icon"> NETWORK
+      </a>
+      <a href="collab.html" style="text-decoration: none; color: #ffffff">
+        <img src="static/img/collabicon.png" alt="Collab" class="nav-icon"> COLLAB
+      </a>
+      <!-- <a href="profile.html" style="text-decoration: none; color: #ffffff">JOIN</a> -->
+    </nav>
+
+    <p class="beta-text">[beta v1.7] <span class="location-text">LONDON</span></p>
+
+    <!-- Search & Filter UI -->
+    <div id="network-searchbar-container">
+      <div class="searchbar-row">
+        <span class="search-icon"
+          ><img src="static/img/search.png" alt="Search" width="22" height="22"
+        /></span>
+        <div class="network-search-wrapper">
+          <input id="network-search-input" type="text" autocomplete="off" />
+        </div>
+        <div id="filter-chips"></div>
+        <button id="practice-filter-btn" aria-label="Filter by practice">
+          <img
+            src="static/img/filter-icon.png"
+            alt="Filter"
+            width="22"
+            height="22"
+          />
+        </button>
+        <!-- Vision Mode UI -->
+        <div id="vision-mode-controls">
+          <button id="vision-mode-btn">Vision</button>
+          <button id="locate-me-btn" aria-label="Locate me" title="Locate me" style="display: none;">
+            <img src="static/img/locate.png" alt="Locate me" width="22" height="22" />
+          </button>
+        </div>
+      </div>
+      <button id="notification-bell-btn" aria-label="Notifications">
+        <img src="static/img/notification.svg" alt="Notifications" />
+      </button>
+    </div>
+
+    <div id="vision-circle-overlay" class="hidden"></div>
+
+    <div class="mobile-top-gradient-bar"></div>
+
+    <!-- Fixed Top Middle Logo -->
+    <a href="welcome.html" id="fixed-top-logo-link" style="display: inline-block; line-height: 0;">
+      <img src="static/img/WHITE KRLOGO.png" alt="KR Logo" id="fixed-top-logo" />
+    </a>
+
+    <a
+      href="profile.html"
+      id="logged-in-user-status"
+      style="display: none; text-decoration: none"
+    >
+      <img id="logged-in-user-avatar" src="" alt="User Avatar" />
+      <span id="logged-in-user-text"></span>
+    </a>
+
+    <button
+      class="clear-filters-btn"
+      id="clear-filters-btn"
+      style="display: none"
+    >
+      Clear Filters
+    </button>
+
+    <!-- Network Loading Screen with Globe Animation -->
+    <div id="network-loading-screen">
+      <canvas id="network-intro-globe-canvas"></canvas>
+      <p class="loading-text"></p>
+    </div>
+    
+    <script>
+      // Set initial loading text immediately based on URL parameter
+      (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isLoadingProfile = urlParams.has('link');
+        const loadingText = document.querySelector('#network-loading-screen .loading-text');
+        if (loadingText) {
+          loadingText.textContent = isLoadingProfile ? 'Loading profile.' : 'Loading network.';
+        }
+      })();
+    </script>
+
+    <svg></svg>
+
+    <div id="popup-container">
+      <div id="popup-background"></div>
+
+      <!-- Sticky "View Community" button for the overlay -->
+      <button id="sticky-view-community-button" style="display: none">
+        <!-- Icon and text will be set by JS or could be predefined if static -->
+      </button>
+
+      <div class="popup">
+        <img id="popup-image" src="" alt="Profile Image" />
+        <h2 id="popup-title"></h2>
+        <div class="social-icons"></div>
+        
+        <div class="popup-spacer"></div>
+        
+        <div class="scroll-indicator" aria-hidden="true">
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <!-- <div class="feature-tile-container"></div> -->
+        <a href="profile.html" target="_blank"
+          ><button
+            id="buttonscrollanchor"
+            class="icon-button altButton"
+            style="margin-top: 0px"
+          >
+            <img
+              src="static/img/communityicon.png"
+              alt="Community Icon"
+              class="button-icon"
+            />
+            JOIN USER ON KR
+          </button>
+        </a>
+        <br />
+
+        <div class="popup-footer">
+          <p>
+            Powered by 🌐
+            <a href="https://www.1-earth.world/" target="_blank">1EARTH</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast for connection success -->
+    <div id="connect-toast" role="status" aria-live="polite">Connection request sent</div>
+
+    <!-- Connect Confirm Popup -->
+    <div id="connect-confirm-overlay" aria-modal="true" role="dialog">
+      <div id="connect-confirm-content">
+        <span id="connect-confirm-close" class="close-popup-btn" style="position:absolute;top:10px;right:12px;font-size:24px;cursor:pointer;">&times;</span>
+        <h2>Confirm Connection</h2>
+        <p id="connect-confirm-text" style="margin-top:8px;">Connect with this user?</p>
+        <div class="connect-confirm-actions">
+          <button id="connect-cancel-btn" class="secondary">Cancel</button>
+          <button id="connect-confirm-btn">Yes</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="static/js/firebase/network-firebase-setup.js"></script>
+    
+    <!-- Auth redirect check -->
+    <script type="module">
+      // Check if user is logged in, redirect to welcome.html if not
+      // Skip redirect if: in iframe, from welcome.html, has explicit access, or has query parameters
+      const isInIframe = window !== window.parent;
+      const fromWelcome = document.referrer && document.referrer.includes('welcome.html');
+      const hasExplicitAccess = sessionStorage.getItem('kr_from_welcome') === '1';
+      
+      // Check if there are any query parameters (like ?link=username)
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasQueryParams = urlParams.toString().length > 0;
+      
+      // If accessing with query params, grant session access
+      if (hasQueryParams && !isInIframe) {
+        sessionStorage.setItem('kr_from_welcome', '1');
+      }
+      
+      if (!isInIframe && !fromWelcome && !hasExplicitAccess && !hasQueryParams) {
+        // Wait for Firebase auth state to be determined
+        let checkCount = 0;
+        const maxChecks = 30; // Max 3 seconds (30 * 100ms)
+        
+        const checkAuth = setInterval(() => {
+          checkCount++;
+          
+          // Wait until auth state is fully resolved
+          if (window.networkFirebaseUtils && window.networkFirebaseUtils.authStateResolved) {
+            const user = window.networkFirebaseUtils.currentUser;
+            
+            clearInterval(checkAuth);
+            
+            // Only redirect if user is NOT logged in
+            if (!user) {
+              console.log('[index.html] User not logged in, redirecting to welcome.html');
+              window.location.href = 'welcome.html';
+            } else {
+              console.log('[index.html] User logged in, staying on index.html');
+            }
+          }
+          
+          // Stop checking after max attempts (assume access granted to avoid blocking)
+          if (checkCount >= maxChecks) {
+            console.log('[index.html] Auth check timeout, allowing access');
+            clearInterval(checkAuth);
+          }
+        }, 100);
+      } else {
+        // Clear the session flag if it was set (but not in iframe or if has query params)
+        if (!isInIframe && !hasQueryParams) {
+          sessionStorage.removeItem('kr_from_welcome');
+        }
+      }
+    </script>
+    
+    <script type="module" src="static/js/pages/network-app.js"></script>
+    <script type="module" src="static/js/globe/network-intro-globe.js"></script>
+    <script src="static/js/components/mobile-nav.js"></script>
+    <script type="module" src="static/js/pages/discover-feed.js"></script>
+    <script type="module">
+      import { getApp, getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+      import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js';
+
+      // Reuse existing app if already initialized by other modules
+      const app = getApps().length ? getApp() : initializeApp({
+        apiKey: "AIzaSyBWYRLFIudpqYdxCZXjiT7nGoJScKcwPv0",
+        authDomain: "kr-net-23.firebaseapp.com",
+        projectId: "kr-net-23",
+        storageBucket: "kr-net-23.firebasestorage.app",
+        messagingSenderId: "466657657759",
+        appId: "1:466657657759:web:83c5c245d1736b48eab3aa",
+        measurementId: "G-Z0XEDT1G9P"
+      });
+
+      try {
+        const analytics = getAnalytics(app);
+        // GA4 usually auto-collects page_view; this is an explicit event for clarity
+        logEvent(analytics, 'page_view', {
+          page_location: window.location.href,
+          page_title: document.title
+        });
+        console.log('[index] GA wired: page_view sent');
+      } catch (e) {
+        console.warn('[index] GA wiring failed', e);
+      }
+    </script>
+
+    <script>
+      // Join KR Popup functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const joinKrButton = document.getElementById("join-kr-button-fixed");
+        const popupOverlay = document.getElementById("join-kr-popup-overlay");
+        const popupBubble = document.getElementById("join-kr-popup-bubble");
+        const popupContent = document.getElementById("join-kr-popup-content");
+        const closePopupBtn = document.getElementById("close-join-popup");
+        const joinMainBtn = document.getElementById("join-kr-main-btn");
+        const backgroundVideo = document.getElementById(
+          "join-kr-background-video"
+        );
+
+        // Open popup with bubble animation
+        if (joinKrButton) {
+          joinKrButton.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Play click sound
+            try {
+              var audio = document.getElementById('node-click-audio');
+              if (audio) { try { audio.currentTime = 0; } catch(_) {} audio.play().catch(function(){}); }
+            } catch (e) { /* ignore */ }
+
+            // Subtle haptic feedback (mobile)
+            try {
+              if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(30); }
+            } catch (_) { /* ignore */ }
+
+            // Get button position
+            const rect = joinKrButton.getBoundingClientRect();
+            const buttonCenterX = rect.left + rect.width / 2;
+            const buttonCenterY = rect.top + rect.height / 2;
+
+            // Calculate bubble size needed to cover screen
+            const maxDistance = Math.sqrt(
+              Math.pow(
+                Math.max(buttonCenterX, window.innerWidth - buttonCenterX),
+                2
+              ) +
+                Math.pow(
+                  Math.max(buttonCenterY, window.innerHeight - buttonCenterY),
+                  2
+                )
+            );
+
+            // Position and size the bubble
+            popupBubble.style.left = buttonCenterX + "px";
+            popupBubble.style.top = buttonCenterY + "px";
+            popupBubble.style.width = maxDistance * 2 + "px";
+            popupBubble.style.height = maxDistance * 2 + "px";
+            popupBubble.style.marginLeft = -maxDistance + "px";
+            popupBubble.style.marginTop = -maxDistance + "px";
+
+            // Show overlay and start animation
+            popupOverlay.classList.add("active");
+            document.body.classList.add("join-popup-active");
+
+            // Start bubble expansion
+            setTimeout(() => {
+              popupBubble.classList.add("expand");
+            }, 10);
+
+            // Show content after bubble animation
+            setTimeout(() => {
+              popupContent.classList.add("visible");
+              // Position JOIN button at bottom right
+              if (joinMainBtn) {
+                joinMainBtn.classList.add("positioned");
+              }
+              // Decide which experience to load based on auth
+              if (window.networkFirebaseUtils && window.networkFirebaseUtils.currentUser) {
+                // Logged-in → DISCOVER feed with dark theme
+                popupContent.style.background = '#161616';
+                popupBubble.style.background = '#161616';
+
+                if (window.discoverFeed) {
+                  window.discoverFeed.initDiscoverFeed(popupContent);
+                }
+              } else {
+                // Not logged-in → keep blue welcome screen + video
+                popupContent.style.background = '#0000ff';
+                popupBubble.style.background = '#0000ff';
+                loadBackgroundVideo();
+              }
+            }, 400);
+          });
+        }
+
+        // Close popup with reverse animation
+        function closePopup() {
+          // Remove positioned class from JOIN button immediately
+          if (joinMainBtn) {
+            joinMainBtn.classList.remove("positioned");
+          }
+
+          // Start hiding content
+          popupContent.classList.add("hiding");
+          popupContent.classList.remove("visible");
+
+          // Start bubble shrink animation
+          popupBubble.classList.remove("expand");
+          popupBubble.classList.add("shrink");
+
+          // Hide overlay after animation completes
+          setTimeout(() => {
+            popupOverlay.classList.remove("active");
+            document.body.classList.remove("join-popup-active");
+            popupBubble.classList.remove("shrink");
+            popupContent.classList.remove("hiding");
+          }, 600);
+        }
+
+        if (closePopupBtn) {
+          closePopupBtn.addEventListener("click", function(){
+            try {
+              var audio = document.getElementById('node-click-audio');
+              if (audio) { try { audio.currentTime = 0; } catch(_) {} audio.play().catch(function(){}); }
+            } catch (e) { /* ignore */ }
+            try { if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(30); } } catch (_) { /* ignore */ }
+            closePopup();
+          });
+        }
+
+        // Close on overlay click (outside content)
+        popupOverlay.addEventListener("click", function (e) {
+          if (e.target === popupOverlay) {
+            closePopup();
+          }
+        });
+
+        // Join button functionality
+        if (joinMainBtn) {
+          joinMainBtn.addEventListener("click", function () {
+            window.location.href = "profile.html";
+          });
+        }
+
+        // Close on escape key
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && popupOverlay.classList.contains("active")) {
+            closePopup();
+          }
+        });
+
+        // Lazy load and fade in background video
+        function loadBackgroundVideo() {
+          if (backgroundVideo && !backgroundVideo.src) {
+            const videoSrc = backgroundVideo.getAttribute("data-src");
+            const sourceSrc = backgroundVideo
+              .querySelector("source")
+              .getAttribute("data-src");
+
+            // Set video source
+            backgroundVideo.src = videoSrc;
+            backgroundVideo.querySelector("source").src = sourceSrc;
+
+            // Handle video load and play
+            backgroundVideo.addEventListener(
+              "canplaythrough",
+              function () {
+                backgroundVideo
+                  .play()
+                  .then(() => {
+                    // Smooth fade in once video is ready
+                    backgroundVideo.classList.add("loaded");
+                  })
+                  .catch((e) => {
+                    console.log("Video autoplay failed:", e);
+                    // Fallback: still fade in video even if autoplay fails
+                    backgroundVideo.classList.add("loaded");
+                  });
+              },
+              { once: true }
+            );
+
+            // Fallback: if video fails to load, keep blue background
+            backgroundVideo.addEventListener("error", function () {
+              console.log("Video failed to load, keeping blue background");
+            });
+
+            // Load the video
+            backgroundVideo.load();
+          }
+        }
+      });
+    </script>
+
+    <!-- JOIN hint bubble controller -->
+    <script>
+      (function(){
+        const SESSION_KEY = 'kr_join_hint_shown_session_v1_0';
+        const SHOW_DELAY_MS = 5000; // starts AFTER welcome overlay closes
+        const AUTO_HIDE_MS = 6000;
+
+        function isLoggedIn(){
+          try { return !!(window.networkFirebaseUtils && window.networkFirebaseUtils.currentUser); }
+          catch(_) { return false; }
+        }
+
+        function positionBubble(bubble, btn){
+          if (!bubble || !btn) return;
+          const br = btn.getBoundingClientRect();
+
+          // Temporarily measure
+          bubble.style.visibility = 'hidden';
+          bubble.style.left = '0px';
+          bubble.style.top = '-9999px';
+          document.body.appendChild(bubble);
+          const bubR = bubble.getBoundingClientRect();
+
+          const margin = 8;
+          let left = br.left + (br.width/2) - (bubR.width/2);
+          left = Math.max(margin, Math.min(left, window.innerWidth - bubR.width - margin));
+
+          let top = br.top - bubR.height - 14 - 5; // shift entire bubble 5px up
+          top = Math.max(margin, top);
+
+          // Tail alignment relative to bubble
+          const bubbleCenter = left + bubR.width/2;
+          const buttonCenter = br.left + br.width/2;
+          const tailOffsetWithinBubble = Math.max(14, Math.min(bubR.width-14, (buttonCenter - left)));
+          bubble.style.setProperty('--tail-left', tailOffsetWithinBubble + 'px');
+
+          bubble.style.left = left + 'px';
+          bubble.style.top = top + 'px';
+          bubble.style.visibility = 'visible';
+        }
+
+        function makeBubble(){
+          const el = document.createElement('div');
+          el.id = 'join-hint-bubble';
+          el.setAttribute('role','button');
+          el.setAttribute('tabindex','0');
+          el.setAttribute('aria-label','JOIN US');
+          el.innerHTML = '<span class="label">JOIN US!</span><button class="close-x" aria-label="Close">×</button>';
+          return el;
+        }
+
+        function showJoinHint(){
+          try { if (sessionStorage.getItem(SESSION_KEY) === '1') return; } catch(_){}
+          if (isLoggedIn()) return;
+
+          const joinBtn = document.getElementById('join-kr-button-fixed');
+          if (!joinBtn) return;
+
+          const bubble = makeBubble();
+          document.body.appendChild(bubble);
+          positionBubble(bubble, joinBtn);
+
+          let hideTimer = null;
+          const scheduleHide = () => {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(hide, AUTO_HIDE_MS);
+          };
+
+          function hide(){
+            try { sessionStorage.setItem(SESSION_KEY,'1'); } catch(_){ }
+            bubble.classList.remove('show');
+            setTimeout(() => { bubble.remove(); }, 220);
+            window.removeEventListener('resize', onPos);
+            window.removeEventListener('scroll', onPos, true);
+            document.removeEventListener('keydown', onEsc);
+          }
+
+          function onPos(){ positionBubble(bubble, joinBtn); }
+          function onEsc(e){ if (e.key === 'Escape') hide(); }
+
+          bubble.addEventListener('click', (e)=>{
+            if (e.target && e.target.classList && e.target.classList.contains('close-x')) { hide(); return; }
+            try {
+              const audio = document.getElementById('node-click-audio');
+              if (audio) { try { audio.currentTime = 0; } catch(_){} audio.play().catch(()=>{}); }
+            } catch(_){ }
+            try { if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(30); } } catch(_){ }
+            const btn = document.getElementById('join-kr-button-fixed');
+            if (btn) btn.click();
+            hide();
+          });
+          bubble.addEventListener('keydown', (e)=>{
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const btn = document.getElementById('join-kr-button-fixed'); if (btn) btn.click(); hide(); }
+          });
+
+          window.addEventListener('resize', onPos);
+          window.addEventListener('scroll', onPos, true);
+          document.addEventListener('keydown', onEsc);
+
+          requestAnimationFrame(()=>{ bubble.classList.add('show'); });
+          scheduleHide();
+        }
+
+        function scheduleAfterWelcome(){
+          // If welcome overlay is already closed, start delay immediately; else wait for event.
+          if (window.__krWelcomeClosed === true) {
+            setTimeout(showJoinHint, SHOW_DELAY_MS);
+          } else {
+            const onClosed = () => {
+              window.removeEventListener('kr_welcome_closed', onClosed);
+              setTimeout(showJoinHint, SHOW_DELAY_MS);
+            };
+            window.addEventListener('kr_welcome_closed', onClosed);
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', scheduleAfterWelcome);
+      })();
+    </script>
+
+    <!-- Notification Popup -->
+    <div id="notification-popup-overlay">
+      <div id="notification-popup-content">
+        <span id="close-notification-popup" class="close-popup-btn"
+          >&times;</span
+        >
+        <h2>Notifications</h2>
+        <p>News coming soon!</p>
+      </div>
+    </div>
+
+    <!-- <div class="kr-mobile-navbar">
+      <a href="index.html" class="active">
+          <img src="static/img/networkicon.png" alt="Network">
+          <span>NETWORK</span>
+      </a>
+      <a href="collab.html">
+          <img src="static/img/collabicon.png" alt="Collab">
+          <span>COLLAB</span>
+      </a>
+      <a href="profile.html">
+          <img src="static/img/profileicon.png" alt="Profile">
+          <span>PROFILE</span>
+      </a>
+    </div> -->
+
+    <div class="kr-mobile-navbar-container">
+      <img
+        src="static/img/navbarbarboder.svg"
+        class="mobile-navbar-border"
+        alt=""
+      />
+      <img
+        src="static/img/navbar.svg"
+        class="mobile-navbar-border border-background"
+        alt=""
+      />
+      <div class="kr-mobile-navbar-bottom-line"></div>
+
+      <div class="kr-mobile-navbar">
+        <a href="index.html" class="active">
+          <div class="mobile-nav-item">
+            <img
+              src="static/img/networkborder.svg"
+              class="mobile-nav-bg"
+              alt=""
+            />
+            <img
+              src="static/img/networkicon.png"
+              class="mobile-nav-icon"
+              alt="Network"
+            />
+          </div>
+        </a>
+        <a href="collab.html">
+          <div class="mobile-nav-item">
+            <img
+              src="static/img/collabborder.svg"
+              class="mobile-nav-bg"
+              alt=""
+            />
+            <img
+              src="static/img/collabicon.png"
+              class="mobile-nav-icon"
+              alt="Collab"
+            />
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Interaction Hint (shown once) -->
+    <div id="interaction-hint" class="interaction-hint" aria-hidden="true">
+      <span class="hint-text"></span>
+    </div>
+    <!-- Clickable Nodes Hint (shown once) -->
+    <div id="clickable-hint" class="interaction-hint click-hint" aria-hidden="true">
+      <span class="hint-text"></span>
+    </div>
+    <!-- Demo cursor overlay for clickable nodes demo -->
+    <div id="demo-cursor" class="demo-cursor" aria-hidden="true">
+      <svg width="18" height="26" viewBox="0 0 18 26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L10 16 L7 17 L9 23 L6.5 24 L4.5 18 L2 19 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <a href="profile.html" id="join-kr-button-fixed">
+      <img src="static/img/community_logo_kr_white.png" alt="Join KR" />
+      <!-- <span>JOIN KR</span> -->
+    </a>
+    <audio
+      id="node-click-audio"
+      src="static/sounds/click-soft.mp3"
+      preload="auto"
+    ></audio>
+
+    <!-- Join KR Welcome Popup -->
+    <div id="join-kr-popup-overlay" class="join-kr-popup-overlay">
+      <div id="join-kr-popup-bubble" class="join-kr-popup-bubble"></div>
+      <div id="join-kr-popup-content" class="join-kr-popup-content">
+        <video
+          id="join-kr-background-video"
+          class="join-kr-background-video"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          data-src="static/video/LOOPBACKKR.mp4"
+        >
+          <source data-src="static/video/LOOPBACKKR.mp4" type="video/mp4" />
+        </video>
+
+        <button id="close-join-popup" class="close-join-popup">&times;</button>
+
+        <div class="join-popup-header">
+          <div class="kr-globe-logo">
+            <img src="static/img/KRSPIN-optimize.gif" alt="KR Logo" />
+          </div>
+          <h1 class="welcome-title">
+            Welcome to the<br /><span class="kr-network-text">KR NETWORK</span>
+          </h1>
+          <p class="beta-info">
+            (beta v1.6) 📍 <span class="location-text">LONDON</span>
+          </p>
+        </div>
+
+        <div class="join-popup-body">
+          <p class="tagline-text">
+            <em
+              >Built by creatives.<br />For creatives. Platforming<br />communities.</em
+            >
+          </p>
+
+          <div class="join-popup-about">
+            <p class="platform-description">KR is a platform where you can:</p>
+
+            <div class="benefits-container">
+              <div class="benefit-card">
+                <strong>Be discovered</strong> <br>
+                for what you do.
+              </div>
+              <div class="benefit-card">
+                <strong>Collaborate</strong> <br>
+                with other new artists
+              </div>
+              <div class="benefit-card">
+                <strong>Platform your community</strong><br>
+                by creating a profile and adding your friends.
+              </div>
+            </div>
+            <a href="https://www.1-earth.world/Portfolio/work.html?id=aMymkMkPaedegpiz0rfmsACaRG23-blog-10" target="_blank"><button class="find-out-more-btn">Find Out More!</button></a>
+
+          </div>
+
+          <!-- <div class="join-movement">
+            <p class="movement-text"><em>Join the Movement,</em></p>
+            <p class="get-started-text">
+              <strong>JOIN & GET STARTED IN MINUTES!</strong>
+            </p>
+          </div> -->
+
+          <button id="join-kr-main-btn" class="join-kr-main-btn">JOIN →</button>
+        </div>
+
+        <!-- <div class="popup-bottom-nav">
+                <div class="nav-icon">⚬⚬⚬</div>
+                <div class="nav-icon">❓</div>
+            </div> -->
+      </div>
+    </div>
+  </body>
+  
+  <!-- Welcome Overlay -->
+  <div id="welcome-overlay" class="welcome-overlay" aria-modal="true" role="dialog" hidden>
+    <div class="welcome-modal" role="document">
+      <div class="welcome-copy">
+        <h2 class="welcome-heading">Welcome to the KR Network</h2>
+        <p class="welcome-sub">KR is a grassroots community platform built by creatives, for creatives.</p>
+        <div class="welcome-body">
+          <p>🌐 Social platforms today are no longer built for creatives to grow &amp; be seen, KR is a community platform &amp; network where we artists can found for what we do, rather than who we are.</p>
+
+          <p><strong>How KR works:</strong></p>
+          <ul>
+            <li><strong>Be Discovered:</strong> Make an account &amp; connect with others to get seen on our network map &amp; discover feed.</li>
+            <li><strong>Collaborate:</strong> Check the collaboration page to see what upcoming opportunities have been posted by others on the network.</li>
+            <li><strong>Platform Your Community:</strong> Connect with your friends to share your audience with them.</li>
+          </ul>
+
+          <p>The website is live, and always growing. One thing will never change: it will always belong to the creatives.</p>
+
+          <p class="welcome-beta"><strong>Beta</strong> — This version of the KR is for development purposes, and is not representative of our final mission yet. Right now we are London only. New updates coming...</p>
+        </div>
+        <div class="welcome-controls">
+          <label class="welcome-toggle">
+            <input type="checkbox" id="welcome-dont-show" class="welcome-checkbox" />
+            <span>Don’t see this again</span>
+          </label>
+          <button id="welcome-enter-btn" class="welcome-enter-btn" type="button">ENTER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Welcome overlay controller
+    (function() {
+      const WELCOME_SEEN_KEY = 'kr_welcome_seen_v1_6';
+      const SESSION_CLOSED_KEY = 'kr_welcome_closed_session_v1_6';
+      const overlay = document.getElementById('welcome-overlay');
+      const enterBtn = document.getElementById('welcome-enter-btn');
+      const dontShow = document.getElementById('welcome-dont-show');
+
+      function closeWelcome() {
+        try {
+          if (dontShow && dontShow.checked) {
+            localStorage.setItem(WELCOME_SEEN_KEY, '1');
+          }
+          sessionStorage.setItem(SESSION_CLOSED_KEY, '1');
+        } catch (e) { /* ignore storage errors */ }
+
+        overlay.classList.remove('visible');
+        setTimeout(() => {
+          overlay.hidden = true;
+          // Signal other scripts (e.g., hints) to proceed
+          window.__krWelcomeClosed = true;
+          window.dispatchEvent(new Event('kr_welcome_closed'));
+        }, 200);
+      }
+
+      function showWelcome() {
+        if (!overlay) return;
+        overlay.hidden = false;
+        overlay.classList.add('visible');
+        setTimeout(() => { if (enterBtn) enterBtn.focus(); }, 50);
+        if (enterBtn) {
+          enterBtn.addEventListener('click', function(){
+            try {
+              var audio = document.getElementById('node-click-audio');
+              if (audio) { try { audio.currentTime = 0; } catch(_) {} audio.play().catch(function(){}); }
+            } catch (e) { /* ignore */ }
+            closeWelcome();
+          }, { once: true });
+        }
+        document.addEventListener('keydown', function onKey(e){
+          if (e.key === 'Escape' && !overlay.hidden) { closeWelcome(); document.removeEventListener('keydown', onKey); }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        // Track if user arrived via profile deep link
+        const search = window.location.search;
+        const hasProfileQuery = new URLSearchParams(search).has('link');
+        window.__krHasProfileOnLoad = !!hasProfileQuery;
+        
+        // Clear welcome flag if user landed directly on profile link (not from welcome.html)
+        const referrer = document.referrer || '';
+        const cameFromWelcomePage = referrer.includes('welcome.html');
+        if (!cameFromWelcomePage && hasProfileQuery) {
+          try { sessionStorage.removeItem('kr_from_welcome'); } catch (e) {}
+        }
+        
+        // Signal that welcome is closed (overlay only shows after profile modal closes)
+        window.__krWelcomeClosed = true;
+        window.dispatchEvent(new Event('kr_welcome_closed'));
+      });
+
+      // Controller for showing welcome after profile modal closes
+      window.krWelcomeControl = {
+        maybeShowAfterProfileClose: function() {
+          try {
+            // Only show if user arrived via profile deep link
+            if (!window.__krHasProfileOnLoad) return;
+            
+            // Only show if user is NOT logged in
+            const isLoggedIn = window.networkFirebaseUtils && window.networkFirebaseUtils.currentUser;
+            if (isLoggedIn) return;
+            
+            // Respect user's "don't show again" choice and session closure
+            const seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1';
+            const closedThisSession = sessionStorage.getItem(SESSION_CLOSED_KEY) === '1';
+            if (seen || closedThisSession) return;
+            
+            // Show welcome overlay
+            window.__krWelcomeClosed = false;
+            showWelcome();
+          } catch (e) {
+            // On error, don't show
+          }
+        }
+      };
+
+      // Show beta text after 3 seconds
+      setTimeout(function() {
+        const betaText = document.querySelector('.beta-text');
+        if (betaText) {
+          betaText.classList.add('show');
+        }
+      }, 3000);
+    })();
+  </script>
+</html>

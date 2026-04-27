@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>KR NETWORK</title>
+
+    <!-- Meta Tags for social media sharing -->
+    <meta name="description" content="Platforming Community" />
+    <meta property="og:title" content="KR NETWORK" />
+    <meta property="og:description" content="Platforming Community" />
+    <meta
+      property="og:image"
+      content="https://kr-net.github.io/static/img/coverpicture.png"
+    />
+    <meta property="og:url" content="https://kr-net.github.io/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170/build/three.module.js",
+        "jsm/": "https://cdn.jsdelivr.net/npm/three@0.170/examples/jsm/"
+      }
+    }
+    </script>
+
+    <link rel="stylesheet" href="../static/css/styles.css" />
+    <!-- REMOVED FIREBASE COMPAT (GOT MODULAR ONE ANYWAYS) -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script> -->
+
+    <link rel="icon" type="image/png" href="../static/img/KRICON.png" />
+
+    <!-- Mobile detection for globe fallback (GIF instead of 3D) -->
+    <script>
+      window.__isMobile = /Mobi|Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent) || window.innerWidth <= 768;
+      window.__krLoadDebugEvents = window.__krLoadDebugEvents || [];
+      window.__krLoadDebug = function(stage, details) {
+        try {
+          const entry = {
+            t: Math.round(performance.now()),
+            stage,
+            details: details || null
+          };
+          window.__krLoadDebugEvents.push(entry);
+        } catch (err) {
+          // Ignore debug event collection failures.
+        }
+      };
+      window.__krLoadDebug('page_boot', {
+        href: window.location.href,
+        isMobile: window.__isMobile,
+        innerWidth: window.innerWidth,
+        userAgent: navigator.userAgent
+      });
+      window.addEventListener('error', function(event) {
+        window.__krLoadDebug('window_error', {
+          message: event.message,
+          source: event.filename,
+          line: event.lineno,
+          column: event.colno
+        });
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        const reason = event && event.reason;
+        window.__krLoadDebug('window_unhandledrejection', {
+          reason: reason && reason.message ? reason.message : String(reason)
+        });
+      });
+      document.addEventListener('DOMContentLoaded', function() {
+        window.__krLoadDebug('index_dom_content_loaded');
+      });
+      window.addEventListener('load', function() {
+        window.__krLoadDebug('index_window_load');
+      });
+      window.hideNetworkLoadingScreen = window.hideNetworkLoadingScreen || function() {
+        const screen = document.getElementById('network-loading-screen');
+        if (!screen) return;
+        if (screen.dataset.hiding === '1') return;
+        if (screen.style.display === 'none' || window.getComputedStyle(screen).display === 'none') return;
+        screen.dataset.hiding = '1';
+        window.__krLoadDebug('fallback_hide_loading_screen_start');
+        screen.style.transition = 'opacity 0.3s ease-out';
+        screen.style.opacity = '0';
+        setTimeout(function() {
+          screen.style.display = 'none';
+          delete screen.dataset.hiding;
+          window.__krLoadDebug('fallback_hide_loading_screen_done');
+        }, 300);
+      };
+    </script>
+
+    <!-- Immediate profile focus mode detection -->
+    <script>
+      // Check for link parameter immediately and add class before page renders
+      const initialUrlParams = new URLSearchParams(window.location.search);
+      if (initialUrlParams.get('link')) {
+        document.documentElement.classList.add('profile-focus-mode');
+      }
+
+      // Apply initial hidden opacity to UI elements for staggered reveal
+      document.addEventListener('DOMContentLoaded', () => {
+        const selectors = [
+          '.kr-navbar',
+          '#network-searchbar-container',
+          '#fixed-top-logo',
+          '.kr-mobile-navbar-container',
+          '#hamburger-btn',
+          '#logged-in-user-status'
+        ];
+        selectors.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => el.classList.add('fade-in-hidden'));
+        });
+      });
+    </script>
+
+    <style>
+      /* Notification Bell */
+      #notification-bell-btn {
+        position: relative;
+        background: black;
+        border: 1px solid #ffffff;
+        cursor: pointer;
+        padding: 5px;
+      }
+
+      #notification-bell-btn.has-notifications .notification-indicator {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        width: 14px;
+        height: 14px;
+        background: radial-gradient(circle at 35% 35%, #ff8a80 0%, #ff3b30 42%, #c40018 100%);
+        border-radius: 50%;
+        border: 1.5px solid #120507;
+        box-shadow:
+          0 0 0 2px rgba(18, 5, 7, 0.7),
+          0 0 10px rgba(255, 59, 48, 0.65);
+        z-index: 2;
+      }
+
+      #notification-bell-btn.has-notifications .notification-indicator::after {
+        content: "";
+        position: absolute;
+        inset: -5px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 59, 48, 0.9);
+        box-shadow: 0 0 12px rgba(255, 59, 48, 0.35);
+        animation: notification-pulse-ring 1.6s ease-out infinite;
+      }
+
+      @keyframes notification-pulse-ring {
+        0% {
+          transform: scale(0.85);
+          opacity: 0.95;
+        }
+        65% {
+          transform: scale(1.9);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1.9);
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #notification-bell-btn.has-notifications .notification-indicator::after {
+          animation: none;
+          opacity: 0.65;
+          transform: scale(1.18);
+        }
+      }
+
+      /* Notification Popup */
+      #notification-popup-overlay {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      }
+
+      /* Connect Confirm Popup */
+      #connect-confirm-overlay {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100000;
+      }
+
+      #connect-confirm-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #connect-confirm-content {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 420px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        text-align: left;
+      }
+
+      #connect-confirm-content h2 {
+        margin: 0 0 8px 0;
+      }
+
+      .connect-confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      /* Simple toast */
+      #connect-toast {
+        position: fixed;
+        top: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #222;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px #0003;
+        z-index: 100001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        font-size: 1rem;
+      }
+
+      #connect-toast.visible {
+        opacity: 1;
+      }
+
+      #notification-popup-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #notification-popup-content {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 450px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      .notification-list {
+        margin-top: 15px;
+      }
+
+      .notification-item {
+        background-color: #2c2c2e;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        position: relative;
+        border-left: 3px solid transparent;
+      }
+
+      .notification-item.unread {
+        background-color: #3a3a3c;
+        border-left: 3px solid #0000ff;
+      }
+
+      .notification-item.unread .unread-indicator {
+        position: absolute;
+        top: 16px;
+        left: -6px;
+        width: 8px;
+        height: 8px;
+        background-color: #ff3b30;
+        border-radius: 50%;
+      }
+
+      .notification-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .notification-category-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+      }
+
+      .notification-category {
+        font-weight: 600;
+        font-size: 0.9em;
+      }
+
+      .notification-timestamp {
+        margin-left: auto;
+        font-size: 0.8em;
+        color: #aaa;
+      }
+
+      .notification-content {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .notification-text {
+        flex-grow: 1;
+      }
+
+      .notification-title {
+        font-size: 1.1em;
+        margin: 0 0 5px 0;
+        font-weight: bold;
+      }
+
+      .notification-body {
+        font-size: 0.95em;
+        color: #ddd;
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      .notification-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+
+      .notification-view-more {
+        display: block;
+        margin-top: 10px;
+        text-align: right;
+        font-size: 0.9em;
+        color: #58a6ff;
+        font-weight: bold;
+        text-decoration: none;
+      }
+
+      .notification-view-more:hover {
+        text-decoration: underline;
+      }
+
+      .no-notifications {
+        text-align: center;
+        color: #888;
+        padding: 20px 0;
+      }
+
+      /* Join KR Popup Styles */
+      .join-kr-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        z-index: 3000; /* above fixed-top-logo (2001) and clear-filters-btn (2002) */
+        display: none;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .join-kr-popup-overlay.active {
+        display: flex;
+      }
+
+      /* Hide hamburger when popup is active */
+      body.join-popup-active #hamburger-btn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* Hide original join button when popup is active */
+      body.join-popup-active #join-kr-button-fixed {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* Hide logged-in user status when popup is active */
+      body.join-popup-active #logged-in-user-status {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* Hide fixed logo and clear-filters when discover feed popup is active */
+      body.join-popup-active #fixed-top-logo,
+      body.join-popup-active #clear-filters-btn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .find-out-more-btn:hover {
+        background: #0000ff;
+        color: #ffffff;
+      }
+
+      /* Position JOIN button in center-bottom when popup is active */
+      .join-kr-main-btn.positioned {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        margin: 0;
+        transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      /* Mobile positioning for JOIN button */
+      @media (max-width: 768px) {
+        .join-kr-main-btn.positioned {
+          bottom: 70px;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+      }
+
+      .join-kr-popup-bubble {
+        position: absolute;
+        background: #0000ff;
+        border-radius: 50%;
+        transform: scale(0);
+        transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        z-index: 1;
+      }
+
+      .join-kr-popup-bubble.expand {
+        transform: scale(1);
+      }
+
+      .join-kr-popup-bubble.shrink {
+        transform: scale(0);
+        transition: transform 0.6s cubic-bezier(0.55, 0.06, 0.68, 0.19);
+      }
+
+      .join-kr-popup-content {
+        position: relative;
+        background: #0000ff;
+        color: white;
+        width: 100vw;
+        height: 100vh;
+        padding: 100px 20px 100px 20px;
+        box-sizing: border-box;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.3s ease 0.3s;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .join-kr-popup-content.visible {
+        opacity: 1;
+      }
+
+      .join-kr-popup-content.hiding {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      /* Background video styling */
+      .join-kr-background-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 1s ease-in-out;
+        z-index: -1;
+      }
+
+      .join-kr-background-video.loaded {
+        opacity: 1;
+      }
+
+      .close-join-popup {
+        position: absolute;
+        top: 40px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 40px;
+        cursor: pointer;
+        z-index: 3;
+      }
+
+      .join-popup-header {
+        margin-top: 10px;
+        margin-bottom: 0px;
+      }
+
+      .kr-globe-logo {
+        margin-bottom: 10px;
+      }
+
+      .kr-globe-logo img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+      }
+
+      .welcome-title {
+        font-size: 1.5rem;
+        font-weight: normal;
+        margin: 10px 0 5px 0;
+        line-height: 1.1;
+      }
+
+      @media (max-width: 768px) {
+        .welcome-title {
+          font-size: 1.0rem;
+        }
+      }
+
+      .kr-network-text {
+        font-size: 2.5rem;
+        font-weight: 900;
+      }
+
+      .beta-info {
+        font-size: 0.8rem;
+        margin: 5px 0;
+        line-height: 1;
+      }
+
+      .location-text {
+        color: #ffaa00;
+      }
+
+      .join-popup-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 600px;
+        width: 100%;
+        /* justify-content: space-between; */
+      }
+
+      .tagline-text {
+        font-size: 1.4rem;
+        font-style: italic;
+        margin: 10px 0;
+        line-height: 1.2;
+      }
+
+      .platform-description {
+        font-size: 1.1rem;
+        font-weight: normal;
+        width: 100%;
+        text-align: left;
+        margin: 0px 0 0px 0;
+      }
+
+      .benefits-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        /* max-width: 500px; */
+        margin: 10px 0;
+      }
+
+      .benefit-card {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        text-align: left;
+        border: 1px solid #333;
+      }
+
+      .find-out-more {
+        margin: 0px;
+        align-self: flex-end;
+      }
+
+      .find-out-more-btn {
+        background: #F68A3F;
+        text-decoration: none;
+        color: #ffffff;
+        float: right;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        border: 1px solid #ffffff;
+      }
+
+      .join-movement {
+        margin: 15px 0 10px 0;
+        text-align: center;
+      }
+
+      .movement-text {
+        font-size: 1.2rem;
+        font-style: italic;
+        margin: 0 0 5px 0;
+      }
+
+      .get-started-text {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .join-popup-about{
+        width: 90%;
+      }
+
+      .join-kr-main-btn {
+        background: #0000ff;
+        color: #ffffff;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: transform 0.2s ease;
+      }
+
+      .join-kr-main-btn:hover {
+        background: #ffaa00;
+        color: #333;
+      }
+
+      .popup-bottom-nav {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 400px;
+        margin-top: 10px;
+        padding: 10px 0;
+      }
+
+      
+
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+
+        .join-kr-popup-content {
+          padding-top: 10px;
+        }
+
+
+
+        .kr-network-text {
+          font-size: 2rem;
+        }
+
+        .tagline-text {
+          font-size: 1.3rem;
+        }
+
+        .platform-description {
+          font-size: 1.0rem;
+        }
+
+        .benefit-card {
+          /* font-size: 1rem; */
+          /* padding: 12px 16px; */
+        }
+
+        .close-join-popup {
+          font-size: 30px;
+          top: 15px;
+          right: 20px;
+        }
+      }
+      
+      /* JOIN hint bubble (iMessage-style) */
+      #join-hint-bubble {
+        position: fixed;
+        background: #0000ff;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 18px;
+        line-height: 1;
+        border-radius: 22px;
+        padding: 10px 16px;
+        z-index: 1100; /* Below welcome overlay (20000), above join button (1002) */
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+        transition: opacity .25s ease, transform .25s ease;
+        pointer-events: auto;
+        white-space: nowrap;
+      }
+      #join-hint-bubble.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      #join-hint-bubble::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: var(--tail-left, 50%);
+        transform: translateX(-50%);
+        border-width: 10px 10px 0 10px;
+        border-style: solid;
+        border-color: #0000ff transparent transparent transparent;
+      }
+      #join-hint-bubble .close-x {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #d9d9d9;
+        border: 1px solid #bfbfbf;
+        color: #333;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      #join-hint-bubble .label { user-select: none; }
+      @media (max-width: 480px) {
+        #join-hint-bubble { font-size: 16px; padding: 9px 14px; }
+      }
+    </style>
+  </head>
+
+  <body class="network-page-body">
+    <button id="hamburger-btn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div id="mobile-side-nav">
+      <a
+        href="../profile.html"
+        id="mobile-logged-in-user-status"
+        style="display: none; text-decoration: none"
+      >
+        <img id="mobile-logged-in-user-avatar" src="" alt="User Avatar" />
+        <span id="mobile-logged-in-user-text"></span>
+      </a>
+      <a href="indexstripped.html">NETWORK</a>
+      <a href="../collab.html">COLLAB</a>
+      <p class="mobile-nav-credit">Designed &amp; Coded by 🌐 <a href="https://www.1-earth.world/" target="_blank">1E Productions</a></p>
+    </div>
+
+    <nav class="kr-navbar">
+      <a href="indexstripped.html" style="text-decoration: none; color: #0000ff">
+        <img src="../static/img/networkicon.png" alt="Network" class="nav-icon"> NETWORK
+      </a>
+      <a href="../collab.html" style="text-decoration: none; color: #ffffff">
+        <img src="../static/img/collabicon.png" alt="Collab" class="nav-icon"> COLLAB
+      </a>
+      <!-- <a href="../profile.html" style="text-decoration: none; color: #ffffff">JOIN</a> -->
+    </nav>
+
+    <p class="beta-text">[beta 2.1] <span class="location-text">LONDON</span></p>
+
+    <!-- Search & Filter UI -->
+    <div id="network-searchbar-container">
+      <div class="searchbar-row">
+        <span class="search-icon"
+          ><img src="../static/img/search.png" alt="Search" width="22" height="22"
+        /></span>
+        <div class="network-search-wrapper">
+          <input id="network-search-input" type="text" autocomplete="off" />
+        </div>
+        <div id="filter-chips"></div>
+        <button id="practice-filter-btn" aria-label="Filter by practice">
+          <img
+            src="../static/img/filter-icon.png"
+            alt="Filter"
+            width="22"
+            height="22"
+          />
+        </button>
+      </div>
+    </div>
+
+    <div class="mobile-top-gradient-bar"></div>
+
+    <!-- Fixed Top Middle Logo -->
+    <a href="indexstripped.html" id="fixed-top-logo-link" style="display: inline-block; line-height: 0;">
+      <img src="../static/img/WHITE KRLOGO.png" alt="KR Logo" id="fixed-top-logo" />
+    </a>
+
+    <a
+      href="../profile.html"
+      id="logged-in-user-status"
+      style="display: none; text-decoration: none"
+    >
+      <img id="logged-in-user-avatar" src="" alt="User Avatar" />
+      <span id="logged-in-user-text"></span>
+    </a>
+
+    <button
+      class="clear-filters-btn"
+      id="clear-filters-btn"
+      style="display: none"
+    >
+      Clear Filters
+    </button>
+
+    <svg></svg>
+
+    <div id="popup-container">
+      <div id="popup-background"></div>
+
+      <!-- Sticky "View Community" button for the overlay -->
+      <button id="sticky-view-community-button" style="display: none">
+        <!-- Icon and text will be set by JS or could be predefined if static -->
+      </button>
+
+      <div class="popup">
+        <button
+          id="popup-close-button"
+          class="popup-close-button"
+          type="button"
+          aria-label="Close profile popup"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M6 6L18 18M18 6L6 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+        <img id="popup-image" src="" alt="Profile Image" />
+        <h2 id="popup-title"></h2>
+        <div class="social-icons"></div>
+        
+        <div class="popup-spacer"></div>
+        
+        <div class="scroll-indicator" aria-hidden="true">
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="chev" width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2 L12 14 L22 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <!-- <div class="feature-tile-container"></div> -->
+        <a href="../profile.html" target="_blank"
+          ><button
+            id="buttonscrollanchor"
+            class="icon-button altButton"
+            style="margin-top: 0px"
+          >
+            <img
+              src="../static/img/communityicon.png"
+              alt="Community Icon"
+              class="button-icon"
+            />
+            JOIN USER ON KR
+          </button>
+        </a>
+        <br />
+
+        <div class="popup-footer">
+          <p>
+            Powered by 🌐
+            <a href="https://www.1-earth.world/" target="_blank">1EARTH</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/network-firebase-setup-stripped.js"></script>
+    <script type="module" src="js/network-app-stripped.js"></script>
+    <script src="../static/js/components/mobile-nav.js"></script>
+    <script type="module">
+      import { getApp, getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+      import { getAnalytics, logEvent, isSupported } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js';
+
+      // Reuse existing app if already initialized by other modules
+      const app = getApps().length ? getApp() : initializeApp({
+        apiKey: "AIzaSyBWYRLFIudpqYdxCZXjiT7nGoJScKcwPv0",
+        authDomain: "kr-net-23.firebaseapp.com",
+        projectId: "kr-net-23",
+        storageBucket: "kr-net-23.firebasestorage.app",
+        messagingSenderId: "466657657759",
+        appId: "1:466657657759:web:83c5c245d1736b48eab3aa",
+        measurementId: "G-Z0XEDT1G9P"
+      });
+
+      // Only init Analytics when IndexedDB is available (avoids error in private browsing, iframes, etc.)
+      isSupported().then((supported) => {
+        if (supported) {
+          try {
+            const analytics = getAnalytics(app);
+            logEvent(analytics, 'page_view', {
+              page_location: window.location.href,
+              page_title: document.title
+            });
+          } catch (e) {
+            console.warn('[index] GA wiring failed', e);
+          }
+        }
+      });
+    </script>
+
+    <!-- <div class="kr-mobile-navbar">
+      <a href="index.html" class="active">
+          <img src="../static/img/networkicon.png" alt="Network">
+          <span>NETWORK</span>
+      </a>
+      <a href="../collab.html">
+          <img src="../static/img/collabicon.png" alt="Collab">
+          <span>COLLAB</span>
+      </a>
+      <a href="../profile.html">
+          <img src="../static/img/profileicon.png" alt="Profile">
+          <span>PROFILE</span>
+      </a>
+    </div> -->
+
+    <div class="kr-mobile-navbar-container">
+      <img
+        src="../static/img/navbarbarboder.svg"
+        class="mobile-navbar-border"
+        alt=""
+      />
+      <img
+        src="../static/img/navbar.svg"
+        class="mobile-navbar-border border-background"
+        alt=""
+      />
+      <div class="kr-mobile-navbar-bottom-line"></div>
+
+      <div class="kr-mobile-navbar">
+        <a href="indexstripped.html" class="active">
+          <div class="mobile-nav-item">
+            <img
+              src="../static/img/networkborder.svg"
+              class="mobile-nav-bg"
+              alt=""
+            />
+            <img
+              src="../static/img/networkicon.png"
+              class="mobile-nav-icon"
+              alt="Network"
+            />
+          </div>
+        </a>
+        <a href="../collab.html">
+          <div class="mobile-nav-item">
+            <img
+              src="../static/img/collabborder.svg"
+              class="mobile-nav-bg"
+              alt=""
+            />
+            <img
+              src="../static/img/collabicon.png"
+              class="mobile-nav-icon"
+              alt="Collab"
+            />
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Interaction Hint (shown once) -->
+    <div id="interaction-hint" class="interaction-hint" aria-hidden="true">
+      <span class="hint-text"></span>
+    </div>
+    <!-- Clickable Nodes Hint (shown once) -->
+    <div id="clickable-hint" class="interaction-hint click-hint" aria-hidden="true">
+      <span class="hint-text"></span>
+    </div>
+    <!-- Demo cursor overlay for clickable nodes demo -->
+    <div id="demo-cursor" class="demo-cursor" aria-hidden="true">
+      <svg width="18" height="26" viewBox="0 0 18 26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L10 16 L7 17 L9 23 L6.5 24 L4.5 18 L2 19 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <audio
+      id="node-click-audio"
+      src="../static/sounds/click-soft.mp3"
+      preload="auto"
+    ></audio>
+
+  </body>
+
+
+</html>

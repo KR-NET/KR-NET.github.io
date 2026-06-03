@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>KR NETWORK</title>
+    <script>
+      (function () {
+        var path = window.location.pathname || '';
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        if (!path || path === '/' || path === '/index.html' || path === '/404.html') {
+          window.location.replace('/index.html');
+          return;
+        }
+        var slug = path.replace(/^\/+/, '');
+        try {
+          sessionStorage.setItem('__krGhPagesPath', path + search + hash);
+          window.location.replace('/index.html');
+          return;
+        } catch (e) { /* sessionStorage blocked (in-app browsers, strict privacy) */ }
+        if (slug) {
+          window.location.replace(
+            '/index.html?link=' + encodeURIComponent(slug) + hash
+          );
+          return;
+        }
+        window.location.replace('/index.html');
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
